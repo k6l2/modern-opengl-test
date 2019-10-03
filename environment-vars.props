@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <K10_INC_DIRS>$(SDL_HOME_X64)\include;$(SDL_HOME_X64)\include\SDL2;$(GLEW_HOME)\include</K10_INC_DIRS>
+    <K10_LIB_DIRS>$(SDL_HOME_X64)\lib;$(GLEW_HOME)\lib\Release\x64</K10_LIB_DIRS>
+    <K10_LIBS_DEBUG>SDL2d.lib;SDL2maind.lib;glew32.lib;opengl32.lib</K10_LIBS_DEBUG>
+    <K10_LIBS_RELEASE>SDL2.lib;SDL2main.lib;glew32.lib;opengl32.lib</K10_LIBS_RELEASE>
+    <K10_BIN_DIRS>$(SDL_HOME_X64)\bin;$(GLEW_HOME)\bin\Release\x64</K10_BIN_DIRS>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemDefinitionGroup />
+  <ItemGroup>
+    <BuildMacro Include="K10_INC_DIRS">
+      <Value>$(K10_INC_DIRS)</Value>
+    </BuildMacro>
+    <BuildMacro Include="K10_LIB_DIRS">
+      <Value>$(K10_LIB_DIRS)</Value>
+    </BuildMacro>
+    <BuildMacro Include="K10_LIBS_DEBUG">
+      <Value>$(K10_LIBS_DEBUG)</Value>
+    </BuildMacro>
+    <BuildMacro Include="K10_LIBS_RELEASE">
+      <Value>$(K10_LIBS_RELEASE)</Value>
+    </BuildMacro>
+    <BuildMacro Include="K10_BIN_DIRS">
+      <Value>$(K10_BIN_DIRS)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>
