@@ -4,8 +4,8 @@
   <PropertyGroup Label="UserMacros">
     <K10_INC_DIRS>$(SDL_HOME_X64)\include;$(SDL_HOME_X64)\include\SDL2;$(GLEW_HOME)\include</K10_INC_DIRS>
     <K10_LIB_DIRS>$(SDL_HOME_X64)\lib;$(GLEW_HOME)\lib\Release\x64</K10_LIB_DIRS>
-    <K10_LIBS_DEBUG>SDL2d.lib;SDL2maind.lib;glew32.lib;opengl32.lib</K10_LIBS_DEBUG>
-    <K10_LIBS_RELEASE>SDL2.lib;SDL2main.lib;glew32.lib;opengl32.lib</K10_LIBS_RELEASE>
+    <K10_LIBS_DEBUG>SDL2d.lib;SDL2maind.lib;glew32.lib;opengl32.lib;glu32.lib</K10_LIBS_DEBUG>
+    <K10_LIBS_RELEASE>SDL2.lib;SDL2main.lib;glew32.lib;opengl32.lib;glu32.lib</K10_LIBS_RELEASE>
     <K10_BIN_DIRS>$(SDL_HOME_X64)\bin;$(GLEW_HOME)\bin\Release\x64</K10_BIN_DIRS>
   </PropertyGroup>
   <PropertyGroup />

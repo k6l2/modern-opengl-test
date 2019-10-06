@@ -1,6 +1,6 @@
-vector<Uint8> k10::readFile(string const& fileName)
+vector<u8> k10::readFile(string const& fileName)
 {
-	vector<Uint8> retVal;
+	vector<u8> retVal;
 	SDL_RWops* file = SDL_RWFromFile(fileName.c_str(), "rb");
 	if (!file)
 	{
@@ -9,7 +9,7 @@ vector<Uint8> k10::readFile(string const& fileName)
 		SDL_assert(false);
 		return {};
 	}
-	const Sint64 fileSize = SDL_RWseek(file, 0, RW_SEEK_END);
+	const i64 fileSize = SDL_RWseek(file, 0, RW_SEEK_END);
 	if (fileSize < 0)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
