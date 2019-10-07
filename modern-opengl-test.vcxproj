@@ -118,6 +118,7 @@
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="Drawable.cpp" />
     <ClCompile Include="GfxProgram.cpp" />
+    <ClCompile Include="GlobalUniformBuffer.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="lodepng\lodepng.cpp" />
     <ClCompile Include="main.cpp" />
@@ -128,6 +129,8 @@
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Transformable.cpp" />
+    <ClCompile Include="VertexArray.cpp" />
+    <ClCompile Include="VertexBuffer.cpp" />
     <ClCompile Include="View.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
@@ -135,12 +138,15 @@
     <ClInclude Include="Color.h" />
     <ClInclude Include="Drawable.h" />
     <ClInclude Include="GfxProgram.h" />
+    <ClInclude Include="GlobalUniformBuffer.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="lodepng\lodepng.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="Transformable.h" />
+    <ClInclude Include="VertexArray.h" />
+    <ClInclude Include="VertexBuffer.h" />
     <ClInclude Include="View.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>

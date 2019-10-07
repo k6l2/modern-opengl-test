@@ -45,16 +45,39 @@ Window* Window::create(char const* title, glm::ivec2 const& size,
 	// check the values of our GL context, since the system could give us
 	//	something different //
 	{
-		int vMajor, vMinor, profile;
+		int vMajor, vMinor, profile, maxUniformBlockSize, 
+			maxVertexUniformComponents, maxUniformBufferBindings,
+			maxUniformLocations, maxVertexUniformBlocks,
+			maxVertexUniformVectors, maxTextureSize, maxTextureImageUnits;
 		SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &profile);
 		SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &vMajor);
 		SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &vMinor);
-		SDL_Log("======= OpenGL Context Attributes ==========\n");
-		SDL_Log("Profile = '%s'\n", profile == SDL_GL_CONTEXT_PROFILE_COMPATIBILITY ? "Compatibility" :
-									profile == SDL_GL_CONTEXT_PROFILE_ES ? "ES" : "Core");
-		SDL_Log("Version = %i.%i\n", vMajor, vMinor);
-		SDL_Log("============================================\n");
-		if (vMajor != 4 || vMinor != 6 || profile != SDL_GL_CONTEXT_PROFILE_CORE)
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxTextureImageUnits);
+		glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize);
+		glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &maxUniformBufferBindings);
+		glGetIntegerv(GL_MAX_UNIFORM_LOCATIONS, &maxUniformLocations);
+		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &maxVertexUniformComponents);
+		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &maxVertexUniformVectors);
+		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &maxVertexUniformBlocks);
+		SDL_Log("VVVVVVV OpenGL Context Attributes VVVVVVVVVV\n");
+		SDL_Log("\tVendor   = '%s'\n", glGetString(GL_VENDOR));
+		SDL_Log("\tRenderer = '%s'\n", glGetString(GL_RENDERER));
+		SDL_Log("\tProfile = '%s'\n", 
+				profile == SDL_GL_CONTEXT_PROFILE_COMPATIBILITY ? "Compatibility" :
+				profile == SDL_GL_CONTEXT_PROFILE_ES ? "ES" : "Core");
+		SDL_Log("\tVersion = %i.%i\n", vMajor, vMinor);
+		SDL_Log("\tGL_MAX_TEXTURE_SIZE=%i (min=1024)\n", maxTextureSize);
+		SDL_Log("\tGL_MAX_TEXTURE_IMAGE_UNITS=%i (min=16)\n", maxTextureImageUnits);
+		SDL_Log("\tGL_MAX_UNIFORM_BLOCK_SIZE=%i (min=16384)\n", maxUniformBlockSize);
+		SDL_Log("\tGL_MAX_UNIFORM_BUFFER_BINDINGS=%i (min=36)\n", maxUniformBufferBindings);
+		SDL_Log("\tGL_MAX_UNIFORM_LOCATIONS=%i (min=1024)\n", maxUniformLocations);
+		SDL_Log("\tGL_MAX_VERTEX_UNIFORM_COMPONENTS=%i (min=1024)\n", maxVertexUniformComponents);
+		SDL_Log("\tGL_MAX_VERTEX_UNIFORM_VECTORS=%i (min=256)\n", maxVertexUniformVectors);
+		SDL_Log("\tGL_MAX_VERTEX_UNIFORM_BLOCKS=%i (min=12)\n", maxVertexUniformBlocks);
+		SDL_Log("^^^^^^^ OpenGL Context Attributes ^^^^^^^^^^\n");
+		if (vMajor != 4 || vMinor != 6 || 
+			profile != SDL_GL_CONTEXT_PROFILE_CORE)
 		{
 			SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
 				"failed to retrieve supported OpenGL context from system!\n");
@@ -90,8 +113,6 @@ Window* Window::create(char const* title, glm::ivec2 const& size,
 			{
 			case GL_SHADER_BINARY_FORMAT_SPIR_V:
 				return "GL_SHADER_BINARY_FORMAT_SPIR_V";
-			///case GL_SHADER_BINARY_FORMAT_SPIR_V_ARB:
-			///	return "GL_SHADER_BINARY_FORMAT_SPIR_V_ARB";
 			}
 			return "UNKNOWN FORMAT";
 		};

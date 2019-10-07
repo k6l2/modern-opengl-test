@@ -4,6 +4,7 @@ const Color Color::Black       = glm::u8vec4{   0,   0,   0, 255 };
 const Color Color::Red         = glm::u8vec4{ 255,   0,   0, 255 };
 const Color Color::Green       = glm::u8vec4{   0, 255,   0, 255 };
 const Color Color::Yellow      = glm::u8vec4{ 255, 255,   0, 255 };
+const Color Color::Blue        = glm::u8vec4{   0,   0, 255, 255 };
 const Color Color::White       = glm::u8vec4{ 255, 255, 255, 255 };
 Color::Color(glm::u8vec4 glColor)
 {

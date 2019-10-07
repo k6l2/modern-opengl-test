@@ -8,6 +8,7 @@ public:
 	static const Color Red;
 	static const Color Green;
 	static const Color Yellow;
+	static const Color Blue;
 public:
 	Color(glm::u8vec4 glColor = { 255,255,255,255 });
 	Color(float r = 1.f, float g = 1.f, float b = 1.f, float a = 1.f);

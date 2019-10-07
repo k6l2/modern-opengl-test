@@ -10,10 +10,12 @@ using i32 = Sint32;
 using i64 = Sint64;
 #include <GL/glew.h>
 #include <SDL_opengl.h>
+#define GLM_FORCE_ALIGNED_GENTYPES
 #include "glm/glm.hpp"
 #include "glm/gtx/string_cast.hpp"
 #include "glm/gtx/matrix_transform_2d.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "glm/gtc/type_aligned.hpp"
 using v2f = glm::vec2;
 using v2i = glm::ivec2;
 using v2u = glm::uvec2;

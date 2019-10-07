@@ -135,68 +135,68 @@ bool GfxProgram::load(string const& shaderSpirvBinaryFilenameVertex,
 	glDeleteShader(fragmentShader);
 	glDeleteShader(vertexShader);
 	// Now that the program is assembled, we can extract attribute locations //
-	projectionMatrixLocation =
-		glGetUniformLocation(programId, "matProjection");
-	if (projectionMatrixLocation == -1)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-					"WARNING!  matProjection "
-						"is not a valid glsl program uniform!\n");
-	}
-	viewMatrixLocation =
-		glGetUniformLocation(programId, "matView2d");
-	if (viewMatrixLocation == -1)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-					"WARNING!  matView2d "
-						"is not a valid glsl program uniform!\n");
-	}
-	modelMatrixLocation =
-		glGetUniformLocation(programId, "matModel2d");
-	if (modelMatrixLocation == -1)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-					"WARNING!  matModel2d "
-						"is not a valid glsl program uniform!\n");
-	}
-	if (!textureless)
-	{
-		textureUnitLocation =
-			glGetUniformLocation(programId, "textureSampler2d");
-		if (textureUnitLocation == -1)
-		{
-			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-						"WARNING!  textureSampler2d "
-							"is not a valid glsl program uniform!\n");
-		}
-	}
-	vertexPositionLocation =
-		glGetAttribLocation(programId, "vertexPosition");
-	if (vertexPositionLocation == -1)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-					"WARNING!  vertexPosition "
-						"is not a valid glsl program uniform!\n");
-	}
-	if (!textureless)
-	{
-		vertexTexCoordLocation =
-			glGetAttribLocation(programId, "vertexTextureCoordinate");
-		if (vertexTexCoordLocation == -1)
-		{
-			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-						"WARNING!  vertexTextureCoordinate "
-							"is not a valid glsl program uniform!\n");
-		}
-	}
-	vertexColorLocation =
-		glGetAttribLocation(programId, "vertexColor");
-	if (vertexColorLocation == -1)
-	{
-		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
-					"WARNING!  vertexColor "
-						"is not a valid glsl program uniform!\n");
-	}
+//	projectionMatrixLocation =
+//		glGetUniformLocation(programId, "matProjection");
+//	if (projectionMatrixLocation == -1)
+//	{
+//		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//					"WARNING!  matProjection "
+//						"is not a valid glsl program uniform!\n");
+//	}
+//	viewMatrixLocation =
+//		glGetUniformLocation(programId, "matView2d");
+//	if (viewMatrixLocation == -1)
+//	{
+//		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//					"WARNING!  matView2d "
+//						"is not a valid glsl program uniform!\n");
+//	}
+//	modelMatrixLocation =
+//		glGetUniformLocation(programId, "matModel2d");
+//	if (modelMatrixLocation == -1)
+//	{
+//		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//					"WARNING!  matModel2d "
+//						"is not a valid glsl program uniform!\n");
+//	}
+//	if (!textureless)
+//	{
+//		textureUnitLocation =
+//			glGetUniformLocation(programId, "textureSampler2d");
+//		if (textureUnitLocation == -1)
+//		{
+//			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//						"WARNING!  textureSampler2d "
+//							"is not a valid glsl program uniform!\n");
+//		}
+//	}
+//	vertexPositionLocation =
+//		glGetAttribLocation(programId, "vertexPosition");
+//	if (vertexPositionLocation == -1)
+//	{
+//		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//					"WARNING!  vertexPosition "
+//						"is not a valid glsl program uniform!\n");
+//	}
+//	if (!textureless)
+//	{
+//		vertexTexCoordLocation =
+//			glGetAttribLocation(programId, "vertexTextureCoordinate");
+//		if (vertexTexCoordLocation == -1)
+//		{
+//			SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//						"WARNING!  vertexTextureCoordinate "
+//							"is not a valid glsl program uniform!\n");
+//		}
+//	}
+//	vertexColorLocation =
+//		glGetAttribLocation(programId, "vertexColor");
+//	if (vertexColorLocation == -1)
+//	{
+//		SDL_LogWarn(SDL_LOG_CATEGORY_VIDEO, 
+//					"WARNING!  vertexColor "
+//						"is not a valid glsl program uniform!\n");
+//	}
 	return true;
 }
 void GfxProgram::free()
