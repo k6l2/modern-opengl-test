@@ -3,9 +3,11 @@
 #include "VertexBuffer.h"
 const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_POSITION      = 0;
 const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_COLOR         = 1;
-const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0 = 2;
-const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1 = 3;
-const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2 = 4;
+///const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0 = 2;
+///const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1 = 3;
+///const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2 = 4;
+const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL_TRANSLATION = 2;
+const GLuint VertexArray::ATTRIB_LOC_TEXTURELESS_MODEL_RADIANS     = 3;
 const GLuint VertexArray::BUFFER_BIND_INDEX_GLOBAL_UNIFORMS = 0;
 // Positions are in model-space, and consequently are unlikely to ever change.
 //	Thus, it makes sense to store positions in a separate STATIC buffer.
@@ -19,7 +21,9 @@ const GLuint VertexArray::BUFFER_BIND_INDEX_TEXTURELESS_COLOR    = 2;
 //	in a separate buffer and use a special technique to reload the entire
 //	thing.  See the following link for more info on that: 
 //	https://www.khronos.org/opengl/wiki/Vertex_Specification_Best_Practices#Dynamic_VBO
-const GLuint VertexArray::BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D  = 3;
+///const GLuint VertexArray::BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D  = 3;
+const GLuint VertexArray::BUFFER_BIND_INDEX_TEXTURELESS_MODEL_TRANSLATION = 3;
+const GLuint VertexArray::BUFFER_BIND_INDEX_TEXTURELESS_MODEL_RADIANS     = 4;
 bool VertexArray::create(VertexType vt)
 {
 	if (vertexArrayObject)
@@ -61,7 +65,8 @@ bool VertexArray::useTextureless(VertexArray const* const va,
 								 GlobalUniformBuffer const& gub,
 								 VertexBuffer const& vbPosition,
 								 VertexBuffer const& vbColor,
-								 VertexBuffer const& vbModel2d)
+								 VertexBuffer const& vbModelTranslation,
+								 VertexBuffer const& vbModelRadians)
 {
 	if (va)
 	{
@@ -109,24 +114,40 @@ bool VertexArray::useTextureless(VertexArray const* const va,
 							 4, GL_UNSIGNED_BYTE, GL_TRUE, 0);
 		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_COLOR, 
 							  BUFFER_BIND_INDEX_TEXTURELESS_COLOR);
-		// mat3x2 vertexModel2d binding //
-		vbModel2d.bind(BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
-		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0);
-		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1);
-		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2);
-		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0, 
-							 2, GL_FLOAT, GL_FALSE, 0 * sizeof(glm::mat3x2::col_type));
-		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1, 
-							 2, GL_FLOAT, GL_FALSE, 1 * sizeof(glm::mat3x2::col_type));
-		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2, 
-							 2, GL_FLOAT, GL_FALSE, 2 * sizeof(glm::mat3x2::col_type));
-		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0, 
-							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
-		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1, 
-							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
-		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2, 
-							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
-		glVertexBindingDivisor(BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D, 1);
+///		// mat3x2 vertexModel2d binding //
+///		vbModel2d.bind(BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
+///		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0);
+///		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1);
+///		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2);
+///		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0, 
+///							 2, GL_FLOAT, GL_FALSE, 0 * sizeof(glm::mat3x2::col_type));
+///		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1, 
+///							 2, GL_FLOAT, GL_FALSE, 1 * sizeof(glm::mat3x2::col_type));
+///		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2, 
+///							 2, GL_FLOAT, GL_FALSE, 2 * sizeof(glm::mat3x2::col_type));
+///		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0, 
+///							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
+///		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1, 
+///							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
+///		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2, 
+///							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D);
+///		glVertexBindingDivisor(BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D, 1);
+		// modelTranslation binding //
+		vbModelTranslation.bind(BUFFER_BIND_INDEX_TEXTURELESS_MODEL_TRANSLATION);
+		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL_TRANSLATION);
+		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL_TRANSLATION,
+							 2, GL_FLOAT, GL_FALSE, 0);
+		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL_TRANSLATION,
+							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL_TRANSLATION);
+		glVertexBindingDivisor(BUFFER_BIND_INDEX_TEXTURELESS_MODEL_TRANSLATION, 1);
+		// modelRadians binding //
+		vbModelRadians.bind(BUFFER_BIND_INDEX_TEXTURELESS_MODEL_RADIANS);
+		glEnableVertexAttribArray(ATTRIB_LOC_TEXTURELESS_MODEL_RADIANS);
+		glVertexAttribFormat(ATTRIB_LOC_TEXTURELESS_MODEL_RADIANS,
+							 1, GL_FLOAT, GL_FALSE, 0);
+		glVertexAttribBinding(ATTRIB_LOC_TEXTURELESS_MODEL_RADIANS,
+							  BUFFER_BIND_INDEX_TEXTURELESS_MODEL_RADIANS);
+		glVertexBindingDivisor(BUFFER_BIND_INDEX_TEXTURELESS_MODEL_RADIANS, 1);
 		///glBindVertexBuffer(BUFFER_BIND_INDEX_TEXTURELESS_POSITION, NULL, 0, 0);
 		///glBindVertexBuffer(BUFFER_BIND_INDEX_TEXTURELESS_COLOR   , NULL, 0, 0);
 		///glBindVertexBuffer(BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D , NULL, 0, 0);

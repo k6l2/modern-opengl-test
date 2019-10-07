@@ -32,20 +32,25 @@ public:
 							   class GlobalUniformBuffer const& gub,
 							   class VertexBuffer const& vbPosition,
 							   class VertexBuffer const& vbColor,
-							   class VertexBuffer const& vbModel2d);
+							   class VertexBuffer const& vbModelTranslation,
+							   class VertexBuffer const& vbModelRadians);
 public:
 	bool create(VertexType vt);
 	void destroy();
 private:
 	static const GLuint ATTRIB_LOC_TEXTURELESS_POSITION;
 	static const GLuint ATTRIB_LOC_TEXTURELESS_COLOR;
-	static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0;
-	static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1;
-	static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2;
+	///static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_0;
+	///static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_1;
+	///static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL2D_COL_2;
+	static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL_TRANSLATION;
+	static const GLuint ATTRIB_LOC_TEXTURELESS_MODEL_RADIANS;
 	static const GLuint BUFFER_BIND_INDEX_GLOBAL_UNIFORMS;
 	static const GLuint BUFFER_BIND_INDEX_TEXTURELESS_POSITION;
 	static const GLuint BUFFER_BIND_INDEX_TEXTURELESS_COLOR;
-	static const GLuint BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D;
+	///static const GLuint BUFFER_BIND_INDEX_TEXTURELESS_MODEL2D;
+	static const GLuint BUFFER_BIND_INDEX_TEXTURELESS_MODEL_TRANSLATION;
+	static const GLuint BUFFER_BIND_INDEX_TEXTURELESS_MODEL_RADIANS;
 private:
 	GLuint vertexArrayObject = NULL;
 	VertexType vertexType;

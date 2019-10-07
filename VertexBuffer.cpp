@@ -29,6 +29,14 @@ void VertexBuffer::destroy()
 	}
 	dataSize = 0;
 }
+void VertexBuffer::resize(size_t elementCount)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(elementCount * elementStride), 
+				 NULL, decodeMemoryUsage(usage));
+	glBindBuffer(GL_ARRAY_BUFFER, NULL);
+	dataSize = static_cast<GLsizei>(elementCount * elementStride);
+}
 void VertexBuffer::update(void const* newData)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);

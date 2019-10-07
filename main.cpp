@@ -11,7 +11,9 @@ GlobalUniformBuffer gGlobalUniformBuffer;
 #include "VertexBuffer.h"
 VertexBuffer gVbPosition;
 VertexBuffer gVbColor;
-VertexBuffer gVbModel;
+///VertexBuffer gVbModel;
+VertexBuffer gVbModelTranslation;
+VertexBuffer gVbModelRadians;
 int main(int argc, char** argv)
 {
 	Window* window = nullptr;
@@ -89,25 +91,35 @@ int main(int argc, char** argv)
 		v2f(0             , -MESH_AABB.y/2),
 		v2f( MESH_AABB.x/2,  MESH_AABB.y/2) };
 	vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
-	static const size_t NUM_MESH_COLS = static_cast<size_t>((1280.f + MESH_AABB.x) / MESH_AABB.x);
+	static const size_t NUM_MESH_COLS = static_cast<size_t>((MESH_AABB.x + 1280.f) / MESH_AABB.x);
 	static const size_t NUM_MODELS = 50000;
-	vector<glm::mat3x2> models(NUM_MODELS);
+	///vector<glm::mat3x2> models(NUM_MODELS);
+	vector<v2f> modelTranslations(NUM_MODELS);
 	vector<float> modelRadians(NUM_MODELS);
-	for (size_t m = 0; m < models.size(); m++)
+	for (size_t m = 0; m < modelTranslations.size(); m++)
 	{
 		const size_t meshCol = m % NUM_MESH_COLS;
 		const size_t meshRow = m / NUM_MESH_COLS;
 		modelRadians[m] = k10::PI * 0.1f * m;
-		models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
-			MESH_AABB * v2f(meshCol, meshRow)),
-			k10::PI * 0.1f * m);
+		///models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
+		///	MESH_AABB * v2f(meshCol, meshRow)),
+		///	k10::PI * 0.1f * m);
+		modelTranslations[m] = MESH_AABB * v2f(meshCol, meshRow);
 	}
-	gVbPosition.create(positions.size(), sizeof(v2f)        , VertexBuffer::MemoryUsage::STATIC);
-	gVbColor   .create(colors.size()   , sizeof(Color)      , VertexBuffer::MemoryUsage::STATIC);
-	gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
+	gVbPosition.create(positions.size(), sizeof(positions[0])   , VertexBuffer::MemoryUsage::STATIC);
+	gVbColor   .create(colors.size()   , sizeof(colors[0])      , VertexBuffer::MemoryUsage::STATIC);
+	///gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
+	gVbModelTranslation.create(modelTranslations.size(), sizeof(modelTranslations[0]), VertexBuffer::MemoryUsage::STREAM);
+	gVbModelRadians    .create(modelRadians.size()     , sizeof(modelRadians[0])     , VertexBuffer::MemoryUsage::STREAM);
 	gVbPosition.update(positions.data());
 	gVbColor   .update(colors.data());
-	gVbModel   .update(models.data());
+	///gVbModel   .update(models.data());
+	gVbModelTranslation.update(modelTranslations.data());
+	gVbModelRadians    .update(modelRadians.data());
+	VertexArray::useTextureless(&gVaTextureless, gGlobalUniformBuffer,
+								gVbPosition, gVbColor, 
+								gVbModelTranslation, gVbModelRadians);
+	glUseProgram(gProgTextureless.getProgramId());
 	// MAIN APPLICATION LOOP //////////////////////////////////////////////////
 	Time frameTimeAccumulator;
 	Clock frameClock;
@@ -140,19 +152,22 @@ int main(int argc, char** argv)
 			// MAIN LOOP LOGIC //
 			if(logicClock.getElapsedTime() <= k10::MAX_LOGIC_TIME_PER_FRAME)
 			{
-				for (size_t m = 0; m < models.size(); m++)
+				for (size_t m = 0; m < modelTranslations.size(); m++)
 				{
 					static const float RADIANS_PER_SECOND = k10::PI * 2.f;
 					const size_t meshCol = m % NUM_MESH_COLS;
 					const size_t meshRow = m / NUM_MESH_COLS;
-					models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
-						MESH_AABB * v2f(meshCol, meshRow)),
-						modelRadians[m] + 
-							RADIANS_PER_SECOND*k10::FIXED_TIME_PER_FRAME.seconds());
-					modelRadians[m] = modelRadians[m] + 
+					///models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
+					///	MESH_AABB * v2f(meshCol, meshRow)),
+					///	modelRadians[m] + 
+					///		RADIANS_PER_SECOND*k10::FIXED_TIME_PER_FRAME.seconds());
+					modelTranslations[m] = MESH_AABB * v2f(meshCol, meshRow);
+					modelRadians[m] +=
 						RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
 				}
-				gVbModel.update(models.data());
+				///gVbModel.update(models.data());
+				gVbModelTranslation.update(modelTranslations.data());
+				gVbModelRadians    .update(modelRadians.data());
 				logicTicks++;
 			}
 			else
@@ -173,24 +188,24 @@ int main(int argc, char** argv)
 		window->clear({ 0.2f, 0.2f, 0.2f, 1.f });
 		// MAIN DRAW LOGIC //
 		{
-			int models_size = models.size();
+			int models_size = static_cast<int>(modelTranslations.size());
 			ImGui::Begin("DEBUG");
-			///ImGui::InputInt("models.size()", &models_size);
 			ImGui::SliderInt("models.size()", &models_size, 1, 1000000);
+			ImGui::InputInt("models.size() set", &models_size);
 			ImGui::End();
-			if (models_size != models.size())
+			if (models_size != modelTranslations.size())
 			{
-				models      .resize(models_size);
-				modelRadians.resize(models_size);
+				modelTranslations.resize(models_size);
+				modelRadians     .resize(models_size);
+				gVbModelTranslation.resize(models_size);
+				gVbModelRadians    .resize(models_size);
+				gVbModelTranslation.update(modelTranslations.data());
+				gVbModelRadians    .update(modelRadians.data());
 			}
-///			ImGui::ShowDemoWindow(nullptr);
-			VertexArray::useTextureless(&gVaTextureless, gGlobalUniformBuffer,
-										gVbPosition, gVbColor, gVbModel);
-			glUseProgram(gProgTextureless.getProgramId());
 			//glDrawArrays(GL_TRIANGLES, 0, 3);
-			glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(models.size()));
-			glUseProgram(NULL);
-			glBindVertexArray(NULL);
+			glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(modelTranslations.size()));
+///			glUseProgram(NULL);
+///			glBindVertexArray(NULL);
 		}
 		window->swapBuffer();
 	}
