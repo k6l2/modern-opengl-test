@@ -9,8 +9,8 @@ public:
 	void update(glm::mat4 const& projection3d, 
 				glm::mat3x2 const& view2d) const;
 	void use(GLuint bufferBindingIndex) const;
-	GLsizei getSize() const;
 private:
+	GLsizei getSize() const;
 private:
 	struct GlobalMatrixBlock
 	{

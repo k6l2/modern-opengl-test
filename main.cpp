@@ -77,21 +77,19 @@ int main(int argc, char** argv)
 		glm::to_string(testProjection).c_str(), sizeof(testProjection));
 	SDL_Log("testView=%s size=%i\n", 
 		glm::to_string(testView).c_str(), sizeof(testView));
-	SDL_Log("gGlobalUniformBuffer.getSize()=%i\n", gGlobalUniformBuffer.getSize());
 	gGlobalUniformBuffer.update(testProjection, testView);
 
 	vector<v2f> positions = { v2f(-300, 300), v2f(0, -300), v2f(300, 300) };
-	gVbPosition.create(3*sizeof(v2f), sizeof(v2f), VertexBuffer::MemoryUsage::STATIC);
-	gVbPosition.update(positions.data());
-
 	vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
-	gVbColor.create(3 * sizeof(Color), sizeof(Color), VertexBuffer::MemoryUsage::DYNAMIC);
-	gVbColor.update(colors.data());
-
-	gVbModel.create(1 * sizeof(glm::mat3x2), sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::DYNAMIC);
-	vector<glm::mat3x2> models = { glm::mat3x2(1.f) };
-	//vector<glm::mat3x2> models = { glm::translate(glm::mat3(1.f), v2f(0,0)) };
-	gVbModel.update(models.data());
+	vector<glm::mat3x2> models = { 
+		glm::translate(glm::mat3(1.f), v2f(0,0)),
+		glm::rotate(glm::translate(glm::mat3(1.f), v2f(200,0)), k10::PI/2.f) };
+	gVbPosition.create(positions.size(), sizeof(v2f)        , VertexBuffer::MemoryUsage::STATIC);
+	gVbColor   .create(colors.size()   , sizeof(Color)      , VertexBuffer::MemoryUsage::DYNAMIC);
+	gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
+	gVbPosition.update(positions.data());
+	gVbColor   .update(colors.data());
+	gVbModel   .update(models.data());
 	
 	// Debug querying.... //
 	{
@@ -133,7 +131,7 @@ int main(int argc, char** argv)
 									gVbPosition, gVbColor, gVbModel);
 		glUseProgram(gProgTextureless.getProgramId());
 //		glDrawArrays(GL_TRIANGLES, 0, 3);
-		glDrawArraysInstanced(GL_TRIANGLES, 0, 3, 1);
+		glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(models.size()));
 		glUseProgram(NULL);
 		glBindVertexArray(NULL);
 		window->swapBuffer();

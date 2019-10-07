@@ -1,10 +1,11 @@
 #include "VertexBuffer.h"
-bool VertexBuffer::create(GLsizei ds, GLsizei s, MemoryUsage u)
+bool VertexBuffer::create(size_t elementCount, GLsizei s, MemoryUsage u)
 {
 	destroy();
 	glGenBuffers(1, &bufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
-	glBufferData(GL_ARRAY_BUFFER, ds, NULL, decodeMemoryUsage(u));
+	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(elementCount*s), 
+				 NULL, decodeMemoryUsage(u));
 	glBindBuffer(GL_ARRAY_BUFFER, NULL);
 	const GLenum oglStatus = glGetError();
 	if (oglStatus != GL_NO_ERROR)
@@ -14,7 +15,7 @@ bool VertexBuffer::create(GLsizei ds, GLsizei s, MemoryUsage u)
 					 glewGetErrorString(oglStatus));
 		return false;
 	}
-	dataSize = ds;
+	dataSize = static_cast<GLsizei>(elementCount * s);
 	elementStride = s;
 	usage = u;
 	return true;
@@ -103,6 +104,8 @@ GLenum VertexBuffer::decodeMemoryUsage(MemoryUsage mu)
 		return GL_STATIC_DRAW;
 	case MemoryUsage::DYNAMIC:
 		return GL_DYNAMIC_DRAW;
+	case MemoryUsage::STREAM:
+		return GL_STREAM_DRAW;
 	}
 	SDL_assert(false);
 	return GL_DYNAMIC_DRAW;

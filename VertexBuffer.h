@@ -8,10 +8,11 @@ public:
 	enum class MemoryUsage : u8
 	{
 		STATIC,
-		DYNAMIC
+		DYNAMIC,
+		STREAM
 	};
 public:
-	bool create(GLsizei dataSize, GLsizei stride, MemoryUsage usage);
+	bool create(size_t elementCount, GLsizei stride, MemoryUsage usage);
 	void destroy();
 	void update(void const* newData);
 	void update(void const* newData, GLint offset, GLsizei size);
