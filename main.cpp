@@ -166,8 +166,6 @@ int main(int argc, char** argv)
 						RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
 				}
 				///gVbModel.update(models.data());
-				gVbModelTranslation.update(modelTranslations.data());
-				gVbModelRadians    .update(modelRadians.data());
 				logicTicks++;
 			}
 			else
@@ -199,9 +197,9 @@ int main(int argc, char** argv)
 				modelRadians     .resize(models_size);
 				gVbModelTranslation.resize(models_size);
 				gVbModelRadians    .resize(models_size);
-				gVbModelTranslation.update(modelTranslations.data());
-				gVbModelRadians    .update(modelRadians.data());
 			}
+			gVbModelTranslation.update(modelTranslations.data());
+			gVbModelRadians    .update(modelRadians.data());
 			//glDrawArrays(GL_TRIANGLES, 0, 3);
 			glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(modelTranslations.size()));
 ///			glUseProgram(NULL);
