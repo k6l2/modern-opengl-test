@@ -1,3 +1,4 @@
+#include "pch.h"
 vector<u8> k10::readFile(string const& fileName)
 {
 	vector<u8> retVal;

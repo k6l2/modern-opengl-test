@@ -1,4 +1,5 @@
 #include "Window.h"
+#include "Clock.h"
 #include "Color.h"
 #include "GfxProgram.h"
 GfxProgram gProgTextureless;
@@ -81,14 +82,30 @@ int main(int argc, char** argv)
 		SDL_Log("testView=%s size=%i\n", 
 			glm::to_string(testView).c_str(), sizeof(testView));
 	}
-
-	vector<v2f> positions = { v2f(-10, 10), v2f(0, -10), v2f(10, 10) };
+	static const v2f MESH_AABB = {10, 10};
+	vector<v2f> positions = { 
+		v2f(-MESH_AABB.x/2,  MESH_AABB.y/2),
+		v2f(0             , -MESH_AABB.y/2),
+		v2f( MESH_AABB.x/2,  MESH_AABB.y/2) };
 	vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
-	vector<glm::mat3x2> models = { 
-		glm::translate(glm::mat3(1.f), v2f(10,10)),
-		glm::rotate(glm::translate(glm::mat3(1.f), v2f(30,10)), k10::PI/2.f) };
+	static const size_t NUM_MESH_COLS = static_cast<size_t>((1280.f + MESH_AABB.x) / MESH_AABB.x);
+	static const size_t NUM_MODELS = 50000;
+	vector<glm::mat3x2> models(NUM_MODELS);
+	vector<float> modelRadians(NUM_MODELS);
+	for (size_t m = 0; m < models.size(); m++)
+	{
+		const size_t meshCol = m % NUM_MESH_COLS;
+		const size_t meshRow = m / NUM_MESH_COLS;
+		modelRadians[m] = k10::PI * 0.1f * m;
+		models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
+			MESH_AABB * v2f(meshCol, meshRow)),
+			k10::PI * 0.1f * m);
+	}
+///	vector<glm::mat3x2> models = { 
+///		glm::translate(glm::mat3(1.f), v2f(10,10)),
+///		glm::rotate(glm::translate(glm::mat3(1.f), v2f(30,10)), k10::PI/2.f) };
 	gVbPosition.create(positions.size(), sizeof(v2f)        , VertexBuffer::MemoryUsage::STATIC);
-	gVbColor   .create(colors.size()   , sizeof(Color)      , VertexBuffer::MemoryUsage::DYNAMIC);
+	gVbColor   .create(colors.size()   , sizeof(Color)      , VertexBuffer::MemoryUsage::STATIC);
 	gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
 	gVbPosition.update(positions.data());
 	gVbColor   .update(colors.data());
@@ -110,7 +127,24 @@ int main(int argc, char** argv)
 			SDL_Log("uniform[%i] - offset=%i size=%i\n", i, offsets[i], sizes[i]);
 		}
 	}
+	// Time testing //
+	{
+		vector<Time> times;
+		times.push_back(Time::seconds(1));
+		times.push_back(Time::seconds(5));
+		times.push_back(Time::seconds(0.25));
+		times.push_back(times[0] + times[2]);
+		times.push_back(times[0] - times[2]);
+		for (size_t t = 0; t < times.size(); t++)
+		{
+			Time& time = times[t];
+			SDL_Log("times[%i] - sec=%f ms=%i us=%i\n", 
+				t, time.seconds(), time.milliseconds(), time.microseconds());
+		}
+	}
 	// MAIN APPLICATION LOOP //////////////////////////////////////////////////
+	Time frameTimeAccumulator;
+	Clock frameClock;
 	while (true)
 	{
 		SDL_Event event;
@@ -129,16 +163,65 @@ int main(int argc, char** argv)
 		{
 			break;
 		}
+		const Time frameDelta = frameClock.restart();
+		frameTimeAccumulator += frameDelta;
+		u32 logicTicks = 0;
+		Clock logicClock;
+		while (frameTimeAccumulator >= k10::FIXED_TIME_PER_FRAME)
+		{
+			///TODO: @fix-your-timestep
+			///	previousState = currentState;
+			// MAIN LOOP LOGIC //
+			if(logicClock.getElapsedTime() <= k10::MAX_LOGIC_TIME_PER_FRAME)
+			{
+				for (size_t m = 0; m < models.size(); m++)
+				{
+					static const float RADIANS_PER_SECOND = k10::PI * 2.f;
+					const size_t meshCol = m % NUM_MESH_COLS;
+					const size_t meshRow = m / NUM_MESH_COLS;
+					models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
+						MESH_AABB * v2f(meshCol, meshRow)),
+						modelRadians[m] + 
+							RADIANS_PER_SECOND*k10::FIXED_TIME_PER_FRAME.seconds());
+					modelRadians[m] = modelRadians[m] + 
+						RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
+				}
+				gVbModel.update(models.data());
+				logicTicks++;
+			}
+			frameTimeAccumulator -= k10::FIXED_TIME_PER_FRAME;
+		}
+		SDL_Log("frameDelta.milliseconds()=%i logicTicks=%i\n", 
+				frameDelta.milliseconds(), logicTicks);
+		///TODO: @fix-your-timestep
+		///	const float interFrameRatio = 
+		///		frameAccumulator.count() / 
+		///			k10::FIXED_SECONDS_PER_FRAME.count();
+		///	const state = previousState*(1 - interFrameRatio) + 
+		///				  currentState*interFrameRatio
 		///glViewport(0, 0,1280,720);
 		window->clear({ 0.2f, 0.2f, 0.2f, 1.f });
-		ImGui::ShowDemoWindow(nullptr);
-		VertexArray::useTextureless(&gVaTextureless, gGlobalUniformBuffer,
-									gVbPosition, gVbColor, gVbModel);
-		glUseProgram(gProgTextureless.getProgramId());
-//		glDrawArrays(GL_TRIANGLES, 0, 3);
-		glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(models.size()));
-		glUseProgram(NULL);
-		glBindVertexArray(NULL);
+		// MAIN DRAW LOGIC //
+		{
+			int models_size = models.size();
+			ImGui::Begin("DEBUG");
+			///ImGui::InputInt("models.size()", &models_size);
+			ImGui::SliderInt("models.size()", &models_size, 1, 1000000);
+			ImGui::End();
+			if (models_size != models.size())
+			{
+				models      .resize(models_size);
+				modelRadians.resize(models_size);
+			}
+///			ImGui::ShowDemoWindow(nullptr);
+			VertexArray::useTextureless(&gVaTextureless, gGlobalUniformBuffer,
+										gVbPosition, gVbColor, gVbModel);
+			glUseProgram(gProgTextureless.getProgramId());
+			//glDrawArrays(GL_TRIANGLES, 0, 3);
+			glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(models.size()));
+			glUseProgram(NULL);
+			glBindVertexArray(NULL);
+		}
 		window->swapBuffer();
 	}
 	return cleanup(EXIT_SUCCESS);

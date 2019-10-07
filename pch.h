@@ -29,11 +29,14 @@ using std::vector;
 #include <string>
 using std::string;
 #include <chrono>
+#include "Time.h"
 namespace k10
 {
 	const int FIXED_FRAMES_PER_SECOND = 240;
-	const std::chrono::duration<double> FIXED_SECONDS_PER_FRAME =
-		std::chrono::duration<double>(1) / FIXED_FRAMES_PER_SECOND;
+///	const std::chrono::duration<double> FIXED_SECONDS_PER_FRAME =
+///		std::chrono::duration<double>(1) / FIXED_FRAMES_PER_SECOND;
+	const Time FIXED_TIME_PER_FRAME = Time::seconds(1.f / FIXED_FRAMES_PER_SECOND);
+	const Time MAX_LOGIC_TIME_PER_FRAME = Time::seconds(1.f / 60);
 	const GLint SHADER_BINARY_FORMAT = GL_SHADER_BINARY_FORMAT_SPIR_V;
 	const float PI = glm::pi<float>();
 }
