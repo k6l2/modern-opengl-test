@@ -82,6 +82,7 @@ int main(int argc, char** argv)
 		SDL_Log("testView=%s size=%i\n", 
 			glm::to_string(testView).c_str(), sizeof(testView));
 	}
+	// instanced 2D mesh testing //
 	static const v2f MESH_AABB = {10, 10};
 	vector<v2f> positions = { 
 		v2f(-MESH_AABB.x/2,  MESH_AABB.y/2),
@@ -101,47 +102,12 @@ int main(int argc, char** argv)
 			MESH_AABB * v2f(meshCol, meshRow)),
 			k10::PI * 0.1f * m);
 	}
-///	vector<glm::mat3x2> models = { 
-///		glm::translate(glm::mat3(1.f), v2f(10,10)),
-///		glm::rotate(glm::translate(glm::mat3(1.f), v2f(30,10)), k10::PI/2.f) };
 	gVbPosition.create(positions.size(), sizeof(v2f)        , VertexBuffer::MemoryUsage::STATIC);
 	gVbColor   .create(colors.size()   , sizeof(Color)      , VertexBuffer::MemoryUsage::STATIC);
 	gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
 	gVbPosition.update(positions.data());
 	gVbColor   .update(colors.data());
 	gVbModel   .update(models.data());
-	
-	// Debug querying.... //
-	{
-		const GLuint uniformBlockIndex = 
-			glGetUniformBlockIndex(gProgTextureless.getProgramId(), "GlobalMatrixBlock");
-		GLuint indices[2];
-		GLint offsets[2];
-		GLsizei sizes[2];
-		glGetActiveUniformBlockiv(gProgTextureless.getProgramId(), uniformBlockIndex,
-			GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, (GLint*)indices);
-		glGetActiveUniformsiv(gProgTextureless.getProgramId(), 2, indices, GL_UNIFORM_OFFSET, offsets);
-		glGetActiveUniformsiv(gProgTextureless.getProgramId(), 2, indices, GL_UNIFORM_SIZE, sizes);
-		for (size_t i = 0; i < 2; i++)
-		{
-			SDL_Log("uniform[%i] - offset=%i size=%i\n", i, offsets[i], sizes[i]);
-		}
-	}
-	// Time testing //
-	{
-		vector<Time> times;
-		times.push_back(Time::seconds(1));
-		times.push_back(Time::seconds(5));
-		times.push_back(Time::seconds(0.25));
-		times.push_back(times[0] + times[2]);
-		times.push_back(times[0] - times[2]);
-		for (size_t t = 0; t < times.size(); t++)
-		{
-			Time& time = times[t];
-			SDL_Log("times[%i] - sec=%f ms=%i us=%i\n", 
-				t, time.seconds(), time.milliseconds(), time.microseconds());
-		}
-	}
 	// MAIN APPLICATION LOOP //////////////////////////////////////////////////
 	Time frameTimeAccumulator;
 	Clock frameClock;
@@ -165,7 +131,7 @@ int main(int argc, char** argv)
 		}
 		const Time frameDelta = frameClock.restart();
 		frameTimeAccumulator += frameDelta;
-		u32 logicTicks = 0;
+		u32 logicTicks = 0, unusedLogicTicks = 0;
 		Clock logicClock;
 		while (frameTimeAccumulator >= k10::FIXED_TIME_PER_FRAME)
 		{
@@ -189,10 +155,14 @@ int main(int argc, char** argv)
 				gVbModel.update(models.data());
 				logicTicks++;
 			}
+			else
+			{
+				unusedLogicTicks++;
+			}
 			frameTimeAccumulator -= k10::FIXED_TIME_PER_FRAME;
 		}
-		SDL_Log("frameDelta.milliseconds()=%i logicTicks=%i\n", 
-				frameDelta.milliseconds(), logicTicks);
+		SDL_Log("frameDelta.milliseconds()=%i logicTicks=%i unusedLogicTicks=%i\n", 
+				frameDelta.milliseconds(), logicTicks, unusedLogicTicks);
 		///TODO: @fix-your-timestep
 		///	const float interFrameRatio = 
 		///		frameAccumulator.count() / 
