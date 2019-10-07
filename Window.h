@@ -14,6 +14,7 @@ public:
 	virtual void clear(Color const& color) override;
 	virtual void draw(class Drawable& drawable, 
 					  struct RenderState const& rState) const override;
+	void processEvent(SDL_Event const& event);
 	void swapBuffer();
 private:
 	SDL_Window* window = nullptr;

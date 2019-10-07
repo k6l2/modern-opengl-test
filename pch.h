@@ -10,6 +10,9 @@ using i32 = Sint32;
 using i64 = Sint64;
 #include <GL/glew.h>
 #include <SDL_opengl.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_opengl3.h"
 #define GLM_FORCE_ALIGNED_GENTYPES
 #include "glm/glm.hpp"
 #include "glm/gtx/string_cast.hpp"

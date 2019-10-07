@@ -70,20 +70,23 @@ int main(int argc, char** argv)
 			"Failed to create GlobalUniformBuffer!\n");
 		return cleanup(EXIT_FAILURE);
 	}
-	glm::mat4 testProjection = glm::ortho(0.f, 1280.f, 720.f, 0.f);
-	// center the view on the origin
-	glm::mat3x2 testView = glm::translate(glm::mat3(1.f), v2f(1280, 720) * 0.5f);
-	SDL_Log("testProjection=%s size=%i\n", 
-		glm::to_string(testProjection).c_str(), sizeof(testProjection));
-	SDL_Log("testView=%s size=%i\n", 
-		glm::to_string(testView).c_str(), sizeof(testView));
-	gGlobalUniformBuffer.update(testProjection, testView);
+	// initialize global matrix uniform buffer //
+	{
+		glm::mat4 testProjection = glm::ortho(0.f, 1280.f, 720.f, 0.f);
+		glm::mat3x2 testView = glm::mat3x2(1.f);
+		//glm::mat3x2 testView = glm::translate(glm::mat3(1.f), v2f(1280, 720) * 0.5f);
+		gGlobalUniformBuffer.update(testProjection, testView);
+		SDL_Log("testProjection=%s size=%i\n", 
+			glm::to_string(testProjection).c_str(), sizeof(testProjection));
+		SDL_Log("testView=%s size=%i\n", 
+			glm::to_string(testView).c_str(), sizeof(testView));
+	}
 
-	vector<v2f> positions = { v2f(-300, 300), v2f(0, -300), v2f(300, 300) };
+	vector<v2f> positions = { v2f(-10, 10), v2f(0, -10), v2f(10, 10) };
 	vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
 	vector<glm::mat3x2> models = { 
-		glm::translate(glm::mat3(1.f), v2f(0,0)),
-		glm::rotate(glm::translate(glm::mat3(1.f), v2f(200,0)), k10::PI/2.f) };
+		glm::translate(glm::mat3(1.f), v2f(10,10)),
+		glm::rotate(glm::translate(glm::mat3(1.f), v2f(30,10)), k10::PI/2.f) };
 	gVbPosition.create(positions.size(), sizeof(v2f)        , VertexBuffer::MemoryUsage::STATIC);
 	gVbColor   .create(colors.size()   , sizeof(Color)      , VertexBuffer::MemoryUsage::DYNAMIC);
 	gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
@@ -114,6 +117,7 @@ int main(int argc, char** argv)
 		bool quit = false;
 		while (SDL_PollEvent(&event))
 		{
+			window->processEvent(event);
 			switch (event.type)
 			{
 			case SDL_QUIT:
@@ -127,6 +131,7 @@ int main(int argc, char** argv)
 		}
 		///glViewport(0, 0,1280,720);
 		window->clear({ 0.2f, 0.2f, 0.2f, 1.f });
+		ImGui::ShowDemoWindow(nullptr);
 		VertexArray::useTextureless(&gVaTextureless, gGlobalUniformBuffer,
 									gVbPosition, gVbColor, gVbModel);
 		glUseProgram(gProgTextureless.getProgramId());
