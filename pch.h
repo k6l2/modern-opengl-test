@@ -29,6 +29,18 @@ using std::vector;
 #include <string>
 using std::string;
 #include <chrono>
+#include <algorithm>
+using std::max;
+using std::min;
+#include <condition_variable>
+using std::condition_variable;
+#include <mutex>
+using std::mutex;
+using std::unique_lock;
+#include <atomic>
+using std::atomic;
+#include <queue>
+using std::queue;
 #include "Time.h"
 namespace k10
 {

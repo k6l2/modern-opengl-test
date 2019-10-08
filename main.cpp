@@ -14,14 +14,103 @@ VertexBuffer gVbColor;
 ///VertexBuffer gVbModel;
 VertexBuffer gVbModelTranslation;
 VertexBuffer gVbModelRadians;
+// Job Thread Pool
+// directed by SeanMiddleditch's suggested approach in:
+//	https://www.gamedev.net/forums/topic/661304-threads-with-sdl-within-c-classes/
+// based on: https://stackoverflow.com/a/51400041/4526664
+// w/ memory access clarification from: 
+//	https://stackoverflow.com/a/30759329/4526664
+struct JobDataProcessModels
+{
+	v2f* modelsTranslation;
+	float* modelsRadians;
+	size_t modelCount;
+	size_t modelOffset;
+	v2f meshAabb;
+	size_t numMeshCols;
+};
+atomic<bool> threadPoolRunning = true;
+condition_variable workerThreadCondition;
+mutex workerThreadMutex;
+queue<JobDataProcessModels> jobsProcessModels;
+atomic<size_t> jobsPosted    = 0;
+atomic<size_t> jobsCompleted = 0;
+bool allWorkFinished()
+{
+	return jobsCompleted == jobsPosted;
+}
+void postJob(JobDataProcessModels const& job)
+{
+	unique_lock<mutex> lock(workerThreadMutex);
+	jobsProcessModels.push(job);
+	jobsPosted++;
+	lock.unlock();
+	workerThreadCondition.notify_one();
+}
+static int workerThreadMain(void* data)
+{
+	JobDataProcessModels currentJobProcessModels;
+	while (true)
+	{
+		// keep the thread idle and only wake under certain conditions //
+		{
+			unique_lock<mutex> lock(workerThreadMutex);
+			workerThreadCondition.wait(lock, []()->bool
+				{
+					return !threadPoolRunning || !jobsProcessModels.empty();
+				});
+			if (!threadPoolRunning)
+			{
+				SDL_Log("Shutting down worker thread...\n");
+				break;
+			}
+			if (jobsProcessModels.empty())
+			{
+				continue;
+			}
+			currentJobProcessModels = jobsProcessModels.front();
+			jobsProcessModels.pop();
+		}
+		// at this point, we should be hired! Now we can work~~~ //
+///		SDL_Log("Hired for job!\n");
+		{
+			for (size_t m = currentJobProcessModels.modelOffset; 
+				 m < currentJobProcessModels.modelOffset + 
+						currentJobProcessModels.modelCount; m++)
+			{
+				static const float RADIANS_PER_SECOND = k10::PI * 2.f;
+				const size_t meshCol = m % currentJobProcessModels.numMeshCols;
+				const size_t meshRow = m / currentJobProcessModels.numMeshCols;
+				currentJobProcessModels.modelsTranslation[m] =
+					currentJobProcessModels.meshAabb * v2f(meshCol, meshRow);
+				currentJobProcessModels.modelsRadians[m] +=
+					RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
+			}
+		}
+		jobsCompleted++;
+	}
+	return EXIT_SUCCESS;
+}
 int main(int argc, char** argv)
 {
 	Window* window = nullptr;
+	vector<SDL_Thread*> threadPool;
 	auto cleanup = [&](int retVal)->int
 	{
 		if (retVal != EXIT_SUCCESS)
 		{
 			SDL_assert(false);
+		}
+		// shut down our thread pool //
+		{
+			unique_lock<mutex> lock(workerThreadMutex);
+			threadPoolRunning = false;
+			lock.unlock();
+			workerThreadCondition.notify_all();
+			for (size_t t = 0; t < threadPool.size(); t++)
+			{
+				SDL_WaitThread(threadPool[t], nullptr);
+			}
 		}
 		if (window)
 		{
@@ -120,9 +209,17 @@ int main(int argc, char** argv)
 								gVbPosition, gVbColor, 
 								gVbModelTranslation, gVbModelRadians);
 	glUseProgram(gProgTextureless.getProgramId());
+	// Let's try spinning up a thread poooooooool //
+	threadPool.resize(max(SDL_GetCPUCount() - 1, 1));
+	for (size_t t = 0; t < threadPool.size(); t++)
+	{
+		threadPool[t] = 
+			SDL_CreateThread(workerThreadMain, "ThreadPoolWorker", nullptr);
+	}
 	// MAIN APPLICATION LOOP //////////////////////////////////////////////////
 	Time frameTimeAccumulator;
 	Clock frameClock;
+	size_t modelsPerJob = 10000;
 	while (true)
 	{
 		SDL_Event event;
@@ -152,20 +249,46 @@ int main(int argc, char** argv)
 			// MAIN LOOP LOGIC //
 			if(logicClock.getElapsedTime() <= k10::MAX_LOGIC_TIME_PER_FRAME)
 			{
-				for (size_t m = 0; m < modelTranslations.size(); m++)
+				for (size_t m = 0; m < modelTranslations.size(); m += modelsPerJob)
 				{
-					static const float RADIANS_PER_SECOND = k10::PI * 2.f;
-					const size_t meshCol = m % NUM_MESH_COLS;
-					const size_t meshRow = m / NUM_MESH_COLS;
-					///models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
-					///	MESH_AABB * v2f(meshCol, meshRow)),
-					///	modelRadians[m] + 
-					///		RADIANS_PER_SECOND*k10::FIXED_TIME_PER_FRAME.seconds());
-					modelTranslations[m] = MESH_AABB * v2f(meshCol, meshRow);
-					modelRadians[m] +=
-						RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
+					const JobDataProcessModels job = {
+						modelTranslations.data(),
+						modelRadians.data(),
+						min(modelTranslations.size() - m, size_t(modelsPerJob)), // modelCount
+						m, // modelOffset
+						MESH_AABB, NUM_MESH_COLS
+					};
+					postJob(job);
 				}
-				///gVbModel.update(models.data());
+///				const JobDataProcessModels job = {
+///					modelTranslations.data(),
+///					modelRadians.data(),
+///					500, // modelCount
+///					0, // modelOffset
+///					MESH_AABB, NUM_MESH_COLS
+///				};
+///				postJob(job);
+///				const JobDataProcessModels job2 = {
+///					modelTranslations.data(),
+///					modelRadians.data(),
+///					500, // modelCount
+///					500, // modelOffset
+///					MESH_AABB, NUM_MESH_COLS
+///				};
+///				postJob(job2);
+				while (!allWorkFinished())
+				{
+					// Spin the main thread while waiting for jobs to complete //
+				}
+///				for (size_t m = 0; m < modelTranslations.size(); m++)
+///				{
+///					static const float RADIANS_PER_SECOND = k10::PI * 2.f;
+///					const size_t meshCol = m % NUM_MESH_COLS;
+///					const size_t meshRow = m / NUM_MESH_COLS;
+///					modelTranslations[m] = MESH_AABB * v2f(meshCol, meshRow);
+///					modelRadians[m] +=
+///						RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
+///				}
 				logicTicks++;
 			}
 			else
@@ -188,8 +311,9 @@ int main(int argc, char** argv)
 		{
 			int models_size = static_cast<int>(modelTranslations.size());
 			ImGui::Begin("DEBUG");
-			ImGui::SliderInt("models.size()", &models_size, 1, 1000000);
+			ImGui::SliderInt("models.size()", &models_size, 1, 1200000);
 			ImGui::InputInt("models.size() set", &models_size);
+			ImGui::InputInt("modelsPerJob", (int*)&modelsPerJob);
 			ImGui::End();
 			if (models_size != modelTranslations.size())
 			{
