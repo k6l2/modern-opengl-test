@@ -135,6 +135,7 @@
     </ClCompile>
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Texture.cpp" />
+    <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Time.cpp" />
     <ClCompile Include="Transformable.cpp" />
     <ClCompile Include="VertexArray.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Texture.h" />
+    <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="Time.h" />
     <ClInclude Include="Transformable.h" />
     <ClInclude Include="VertexArray.h" />
