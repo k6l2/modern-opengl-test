@@ -15,6 +15,8 @@ VertexBuffer gVbColor;
 VertexBuffer gVbModelTranslation;
 VertexBuffer gVbModelRadians;
 #include "ThreadPool.h"
+#include "GuiFrameDiagnosticData.h"
+GuiFrameDiagnosticData guiFrameDiagData;
 int main(int argc, char** argv)
 {
 	Window* window = nullptr;
@@ -44,8 +46,14 @@ int main(int argc, char** argv)
 	}
 	SDL_LogSetPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
 	SDL_LogSetPriority(SDL_LOG_CATEGORY_ERROR, SDL_LOG_PRIORITY_DEBUG);
+	SDL_Log("========== CPU Attributes ==================\n");
+	SDL_Log("\tLogic core count=%i\n", SDL_GetCPUCount());
+	SDL_Log("\tL1 cache line size=%i bytes\n", SDL_GetCPUCacheLineSize());
+	SDL_Log("============================================\n");
 	// As soon as possible (when SDL is initialized), spawn our job thread pool //
-	threadPool.create(max(SDL_GetCPUCount() - 1, 1));
+	const size_t desiredThreadPoolSize = max(SDL_GetCPUCount() - 1, 1);
+	SDL_Log("Creating ThreadPool with %i worker threads...\n", desiredThreadPoolSize);
+	threadPool.create(desiredThreadPoolSize);
 	// As soon as our job thread pool is running, create our application window.
 	//	This way, we could potentially do work while the main thread is 
 	//	communicating w/ the OS to create a window, drawing context, etc... //
@@ -185,8 +193,8 @@ int main(int argc, char** argv)
 			}
 			frameTimeAccumulator -= k10::FIXED_TIME_PER_FRAME;
 		}
-		SDL_Log("frameDelta.milliseconds()=%i logicTicks=%i unusedLogicTicks=%i\n", 
-				frameDelta.milliseconds(), logicTicks, unusedLogicTicks);
+		guiFrameDiagData.append(frameDelta.milliseconds(), 
+								logicTicks, unusedLogicTicks);
 		///TODO: @fix-your-timestep
 		///	const float interFrameRatio = 
 		///		frameAccumulator.count() / 
@@ -197,18 +205,22 @@ int main(int argc, char** argv)
 		window->clear({ 0.2f, 0.2f, 0.2f, 1.f });
 		// MAIN DRAW LOGIC //
 		{
-			int models_size = static_cast<int>(modelTranslations.size());
-			ImGui::Begin("DEBUG");
-			ImGui::SliderInt("models.size()", &models_size, 1, 1200000);
-			ImGui::InputInt("models.size() set", &models_size);
-			ImGui::InputInt("modelsPerJob", (int*)&modelsPerJob);
-			ImGui::End();
-			if (models_size != modelTranslations.size())
+			guiFrameDiagData.draw();
+			// debug data size GUI //
 			{
-				modelTranslations.resize(models_size);
-				modelRadians     .resize(models_size);
-				gVbModelTranslation.resize(models_size);
-				gVbModelRadians    .resize(models_size);
+				int models_size = static_cast<int>(modelTranslations.size());
+				ImGui::Begin("DEBUG");
+				ImGui::SliderInt("models.size()", &models_size, 1, 1200000);
+				ImGui::InputInt("models.size() set", &models_size);
+				ImGui::InputInt("modelsPerJob", (int*)&modelsPerJob);
+				ImGui::End();
+				if (models_size != modelTranslations.size())
+				{
+					modelTranslations.resize(models_size);
+					modelRadians     .resize(models_size);
+					gVbModelTranslation.resize(models_size);
+					gVbModelRadians    .resize(models_size);
+				}
 			}
 			gVbModelTranslation.update(modelTranslations.data());
 			gVbModelRadians    .update(modelRadians.data());

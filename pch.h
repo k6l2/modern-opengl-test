@@ -28,10 +28,13 @@ using v2u = glm::uvec2;
 using std::vector;
 #include <string>
 using std::string;
+#include <sstream>
+using std::stringstream;
 #include <chrono>
 #include <algorithm>
 using std::max;
 using std::min;
+using std::max_element;
 #include <condition_variable>
 using std::condition_variable;
 #include <mutex>

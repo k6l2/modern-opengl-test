@@ -61,7 +61,7 @@ Window* Window::create(char const* title, glm::ivec2 const& size,
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &maxVertexUniformComponents);
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &maxVertexUniformVectors);
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_BLOCKS, &maxVertexUniformBlocks);
-		SDL_Log("VVVVVVV OpenGL Context Attributes VVVVVVVVVV\n");
+		SDL_Log("======= OpenGL Context Attributes ==========\n");
 		SDL_Log("\tVendor   = '%s'\n", glGetString(GL_VENDOR));
 		SDL_Log("\tRenderer = '%s'\n", glGetString(GL_RENDERER));
 		SDL_Log("\tProfile = '%s'\n", 
@@ -76,7 +76,7 @@ Window* Window::create(char const* title, glm::ivec2 const& size,
 		SDL_Log("\tGL_MAX_VERTEX_UNIFORM_COMPONENTS=%i (min=1024)\n", maxVertexUniformComponents);
 		SDL_Log("\tGL_MAX_VERTEX_UNIFORM_VECTORS=%i (min=256)\n", maxVertexUniformVectors);
 		SDL_Log("\tGL_MAX_VERTEX_UNIFORM_BLOCKS=%i (min=12)\n", maxVertexUniformBlocks);
-		SDL_Log("^^^^^^^ OpenGL Context Attributes ^^^^^^^^^^\n");
+		SDL_Log("============================================\n");
 		if (vMajor != 4 || vMinor != 6 || 
 			profile != SDL_GL_CONTEXT_PROFILE_CORE)
 		{

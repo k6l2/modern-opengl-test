@@ -120,6 +120,7 @@
     <ClCompile Include="Drawable.cpp" />
     <ClCompile Include="GfxProgram.cpp" />
     <ClCompile Include="GlobalUniformBuffer.cpp" />
+    <ClCompile Include="GuiFrameDiagnosticData.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_demo.cpp" />
@@ -149,6 +150,7 @@
     <ClInclude Include="Drawable.h" />
     <ClInclude Include="GfxProgram.h" />
     <ClInclude Include="GlobalUniformBuffer.h" />
+    <ClInclude Include="GuiFrameDiagnosticData.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="lodepng\lodepng.h" />
     <ClInclude Include="pch.h" />
