@@ -31,14 +31,17 @@ void VertexBuffer::destroy()
 }
 void VertexBuffer::resize(size_t elementCount)
 {
+	SDL_assert(bufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
-	glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(elementCount * elementStride), 
+	glBufferData(GL_ARRAY_BUFFER, 
+				 static_cast<GLsizei>(elementCount * elementStride), 
 				 NULL, decodeMemoryUsage(usage));
 	glBindBuffer(GL_ARRAY_BUFFER, NULL);
 	dataSize = static_cast<GLsizei>(elementCount * elementStride);
 }
-void VertexBuffer::update(void const* newData)
+void VertexBuffer::update(void const* newData) const
 {
+	SDL_assert(bufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
 	glBufferData(GL_ARRAY_BUFFER, dataSize, NULL, decodeMemoryUsage(usage));
 	glBufferSubData(GL_ARRAY_BUFFER, 0, dataSize, newData);
@@ -53,11 +56,12 @@ void VertexBuffer::update(void const* newData)
 	}
 }
 void VertexBuffer::update(void const* newData, 
-						  GLint offset, GLsizei size)
+						  size_t elementOffset, size_t elementCount) const
 {
 	SDL_assert(bufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
-	glBufferSubData(GL_ARRAY_BUFFER, offset, size, newData);
+	glBufferSubData(GL_ARRAY_BUFFER, elementOffset*elementStride, 
+					elementCount*elementStride, newData);
 	glBindBuffer(GL_ARRAY_BUFFER, NULL);
 	const GLenum oglStatus = glGetError();
 	if (oglStatus != GL_NO_ERROR)

@@ -1,11 +1,9 @@
 #include "Window.h"
 #include "Drawable.h"
 #include "GfxProgram.h"
-Window* Window::create(char const* title, glm::ivec2 const& size,
-					   GfxProgram const* const programTextureless,
-					   GfxProgram const* const programTextured)
+Window* Window::create(char const* title, glm::ivec2 const& size)
 {
-	Window* retVal = new Window(programTextureless, programTextured);
+	Window* retVal = new Window;
 	auto cleanup = [&]()->Window*
 	{
 		SDL_assert(false);
@@ -181,33 +179,41 @@ void Window::destroy(Window* w)
 		w->window = nullptr;
 	}
 }
-Window::Window(GfxProgram const* const programTextureless,
-			   GfxProgram const* const programTextured)
-	: Renderer(programTextureless, programTextured)
-{
-}
 void Window::clear(Color const& c)
 {
+	// binding NULL causes the window to become the target framebuffer //
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, NULL);
 	glClearColor(c.fR(), c.fG(), c.fB(), c.fA());
 	glClear(GL_COLOR_BUFFER_BIT);
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(window);
 	ImGui::NewFrame();
 }
-void Window::draw(Drawable& drawable, 
-				  struct RenderState const& rState) const
+void Window::use() const
 {
+	// binding NULL causes the window to become the target framebuffer //
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, NULL);
+	// make sure that we are drawing to the proper window area //
 	glViewport(0, 0, 
 		static_cast<GLsizei>(getSize().x), 
 		static_cast<GLsizei>(getSize().y));
-	for (size_t b = 0; b < drawable.getBatchCount(); b++)
-	{
-		GfxProgram const*const gfxProgram = drawable.getTexture(b) ?
-			getGfxProgramTextured() : getGfxProgramTextureless();
-		gfxProgram->run(drawable, b, rState, 
-						getProjection(), getView().getMatrix());
-	}
+	// update the proper uniform buffer with view & projection transforms //
+	k10::gGlobalUniformBuffer.update(getProjection(), getView().getMatrix());
 }
+/// void Window::draw(Drawable& drawable, 
+/// 				  struct RenderState const& rState) const
+/// {
+/// 	glViewport(0, 0, 
+/// 		static_cast<GLsizei>(getSize().x), 
+/// 		static_cast<GLsizei>(getSize().y));
+/// 	for (size_t b = 0; b < drawable.getBatchCount(); b++)
+/// 	{
+/// 		GfxProgram const*const gfxProgram = drawable.getTexture(b) ?
+/// 			getGfxProgramTextured() : getGfxProgramTextureless();
+/// 		gfxProgram->run(drawable, b, rState, 
+/// 						getProjection(), getView().getMatrix());
+/// 	}
+/// }
 void Window::processEvent(SDL_Event const& event)
 {
 	ImGui_ImplSDL2_ProcessEvent(&event);
@@ -220,4 +226,18 @@ void Window::swapBuffer()
 	///glClear(GL_COLOR_BUFFER_BIT);
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(window);
+}
+v2f Window::transformToWorldSpace(v2i const& windowSpacePosition) const
+{
+	View const& view            = getView();
+	const glm::mat3 view2d = view.getMatrix();
+	const glm::mat4 view3d = glm::mat4(
+		view2d[0][0], view2d[0][1], 0, view2d[0][2],
+		view2d[1][0], view2d[1][1], 0, view2d[0][2],
+		0           , 0           , 1, 0           ,
+		view2d[2][0], view2d[2][1], 0, view2d[2][2]);
+	const glm::mat4 viewInverse = glm::inverse(view3d);
+	const glm::vec4 retVal3d = viewInverse *
+		glm::vec4(v2f(windowSpacePosition.x, windowSpacePosition.y), 0, 1);
+	return v2f(retVal3d.x, retVal3d.y);
 }

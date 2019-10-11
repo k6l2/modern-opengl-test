@@ -1,155 +1,111 @@
-#include "Window.h"
 #include "Clock.h"
-#include "Color.h"
-#include "GfxProgram.h"
-GfxProgram gProgTextureless;
-GfxProgram gProgTextured;
-#include "VertexArray.h"
-VertexArray gVaTextureless;
-#include "GlobalUniformBuffer.h"
-GlobalUniformBuffer gGlobalUniformBuffer;
-#include "VertexBuffer.h"
-VertexBuffer gVbPosition;
-VertexBuffer gVbColor;
-///VertexBuffer gVbModel;
-VertexBuffer gVbModelTranslation;
-VertexBuffer gVbModelRadians;
-#include "ThreadPool.h"
 #include "GuiFrameDiagnosticData.h"
-GuiFrameDiagnosticData guiFrameDiagData;
+#include "InstancedMeshCache.h"
 int main(int argc, char** argv)
 {
-	Window* window = nullptr;
-	ThreadPool threadPool;
+	InstancedMeshCache testIMeshCache;
+	GuiFrameDiagnosticData guiFrameDiagData;
 	auto cleanup = [&](int retVal)->int
 	{
 		if (retVal != EXIT_SUCCESS)
 		{
 			SDL_assert(false);
 		}
-		threadPool.destroy();
-		if (window)
-		{
-			Window::destroy(window);
-			window = nullptr;
-		}
-		gProgTextureless.free();
-		gProgTextured.free();
+		testIMeshCache.destroy();
+		k10::cleanupGlobalAssets();
+		k10::cleanupGlobalAppData();
 		SDL_Quit();
 		return retVal;
 	};
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
-			"unable to init SDL: '%s'\n", SDL_GetError());
+					 "unable to init SDL: '%s'\n", SDL_GetError());
 		return cleanup(EXIT_FAILURE);
 	}
 	SDL_LogSetPriority(SDL_LOG_CATEGORY_VIDEO, SDL_LOG_PRIORITY_DEBUG);
 	SDL_LogSetPriority(SDL_LOG_CATEGORY_ERROR, SDL_LOG_PRIORITY_DEBUG);
-	SDL_Log("========== CPU Attributes ==================\n");
-	SDL_Log("\tLogic core count=%i\n", SDL_GetCPUCount());
-	SDL_Log("\tL1 cache line size=%i bytes\n", SDL_GetCPUCacheLineSize());
-	SDL_Log("============================================\n");
-	// As soon as possible (when SDL is initialized), spawn our job thread pool //
-	const size_t desiredThreadPoolSize = max(SDL_GetCPUCount() - 1, 1);
-	SDL_Log("Creating ThreadPool with %i worker threads...\n", desiredThreadPoolSize);
-	threadPool.create(desiredThreadPoolSize);
-	// As soon as our job thread pool is running, create our application window.
-	//	This way, we could potentially do work while the main thread is 
-	//	communicating w/ the OS to create a window, drawing context, etc... //
-	window = Window::create("modern-opengl-test", { 1280,720 }, 
-							&gProgTextureless, &gProgTextured);
-	if (!window)
+	if (!k10::initializeGlobalAppData())
 	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			"Window creation failed!\n");
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
+					 "initializeGlobalAppData failed!\n");
 		return cleanup(EXIT_FAILURE);
 	}
-	// GFX Resource loading //
-	//	gProgTextured.load();
-	if (!gProgTextureless.load("shader-bin/simple-draw-vert.spv", 
-							   "shader-bin/simple-draw-frag.spv", true))
+	if (!k10::loadGlobalAssets())
 	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			"Failed to load textureless GfxProgram!\n");
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, 
+					 "loadGlobalAssets failed!\n");
 		return cleanup(EXIT_FAILURE);
-	}
-	else
-	{
-		SDL_Log("Loaded textureless GfxProgram!\n");
-	}
-	if (!gVaTextureless.create(VertexArray::VertexType::TEXTURELESS))
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			"Failed to create textureless Vertex Array Object!\n");
-		return cleanup(EXIT_FAILURE);
-	}
-	if (!gGlobalUniformBuffer.create())
-	{
-		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-			"Failed to create GlobalUniformBuffer!\n");
-		return cleanup(EXIT_FAILURE);
-	}
-	// initialize global matrix uniform buffer //
-	{
-		glm::mat4 testProjection = glm::ortho(0.f, 1280.f, 720.f, 0.f);
-		glm::mat3x2 testView = glm::mat3x2(1.f);
-		//glm::mat3x2 testView = glm::translate(glm::mat3(1.f), v2f(1280, 720) * 0.5f);
-		gGlobalUniformBuffer.update(testProjection, testView);
-		SDL_Log("testProjection=%s size=%i\n", 
-			glm::to_string(testProjection).c_str(), sizeof(testProjection));
-		SDL_Log("testView=%s size=%i\n", 
-			glm::to_string(testView).c_str(), sizeof(testView));
 	}
 	// instanced 2D mesh testing //
-	static const v2f MESH_AABB = {10, 10};
-	vector<v2f> positions = { 
-		v2f(-MESH_AABB.x/2,  MESH_AABB.y/2),
-		v2f(0             , -MESH_AABB.y/2),
-		v2f( MESH_AABB.x/2,  MESH_AABB.y/2) };
-	vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
-	static const size_t NUM_MESH_COLS = static_cast<size_t>((MESH_AABB.x + 1280.f) / MESH_AABB.x);
-	static const size_t NUM_MODELS = 50000;
-	///vector<glm::mat3x2> models(NUM_MODELS);
-	vector<v2f> modelTranslations(NUM_MODELS);
-	vector<float> modelRadians(NUM_MODELS);
-	for (size_t m = 0; m < modelTranslations.size(); m++)
+	if (!testIMeshCache.create(1000, 1200000))
 	{
-		const size_t meshCol = m % NUM_MESH_COLS;
-		const size_t meshRow = m / NUM_MESH_COLS;
-		modelRadians[m] = k10::PI * 0.1f * m;
-		///models[m] = glm::rotate(glm::translate(glm::mat3(1.f),
-		///	MESH_AABB * v2f(meshCol, meshRow)),
-		///	k10::PI * 0.1f * m);
-		modelTranslations[m] = MESH_AABB * v2f(meshCol, meshRow);
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+					 "Failed to create testIMeshCache!\n");
+		return cleanup(EXIT_FAILURE);
 	}
-	gVbPosition.create(positions.size(), sizeof(positions[0])   , VertexBuffer::MemoryUsage::STATIC);
-	gVbColor   .create(colors.size()   , sizeof(colors[0])      , VertexBuffer::MemoryUsage::STATIC);
-	///gVbModel   .create(models.size()   , sizeof(glm::mat3x2), VertexBuffer::MemoryUsage::STREAM);
-	gVbModelTranslation.create(modelTranslations.size(), sizeof(modelTranslations[0]), VertexBuffer::MemoryUsage::STREAM);
-	gVbModelRadians    .create(modelRadians.size()     , sizeof(modelRadians[0])     , VertexBuffer::MemoryUsage::STREAM);
-	gVbPosition.update(positions.data());
-	gVbColor   .update(colors.data());
-	///gVbModel   .update(models.data());
-	gVbModelTranslation.update(modelTranslations.data());
-	gVbModelRadians    .update(modelRadians.data());
-	VertexArray::useTextureless(&gVaTextureless, gGlobalUniformBuffer,
-								gVbPosition, gVbColor, 
-								gVbModelTranslation, gVbModelRadians);
-	glUseProgram(gProgTextureless.getProgramId());
+	InstancedMeshCache::MeshId meshIdTriangle;
+	InstancedMeshCache::MeshId meshIdOrigin;
+	{
+		static const v2f MESH_AABB = {50, 50};
+		vector<v2f> positions = { 
+			v2f(-MESH_AABB.x/2,  MESH_AABB.y/2),
+			v2f(0             , -MESH_AABB.y/2),
+			v2f( MESH_AABB.x/2,  MESH_AABB.y/2) };
+		vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
+		meshIdTriangle = testIMeshCache.addMesh(positions, colors, 1199999, 
+												GL_TRIANGLES);
+	}
+	{
+		vector<v2f> positions = {
+			v2f(0,0), v2f(1,0),
+			v2f(0,0), v2f(0,1) };
+		vector<Color> colors = {
+			Color::Red, Color::Red,
+			Color::Green, Color::Green };
+		meshIdOrigin = testIMeshCache.addMesh(positions, colors, 1, GL_LINES);
+	}
+	const InstancedMeshCache::InstanceId instanceOrigin =
+		testIMeshCache.createInstance(meshIdOrigin);
+	const v2f originScale = v2f(100, 100);
+	testIMeshCache.setModel(instanceOrigin, v2f(0, 0), 0, &originScale);
 	// MAIN APPLICATION LOOP //////////////////////////////////////////////////
 	Time frameTimeAccumulator;
 	Clock frameClock;
-	size_t modelsPerJob = 10000;
+	float debugRadians = 0;
+	int debugInstanceId = 0;
+	vector<InstancedMeshCache::InstanceId> iids;
 	while (true)
 	{
 		SDL_Event event;
 		bool quit = false;
 		while (SDL_PollEvent(&event))
 		{
-			window->processEvent(event);
+			k10::gWindow->processEvent(event);
 			switch (event.type)
 			{
+			case SDL_MOUSEBUTTONDOWN:
+				switch (event.button.button)
+				{
+				case SDL_BUTTON_LEFT: {
+					const v2f worldPosition = 
+						k10::gWindow->transformToWorldSpace(
+							{ event.button.x, event.button.y });
+					SDL_Log("left click @ [%i,%i]::window-space "
+							"[%f,%f]::world-space\n",
+							event.button.x, event.button.y,
+							worldPosition.x, worldPosition.y);
+					// Create a triangle mesh at this location //
+					const InstancedMeshCache::InstanceId iid = 
+						testIMeshCache.createInstance(meshIdTriangle);
+					if (iid != InstancedMeshCache::INVALID_INSTANCE_ID)
+					{
+						iids.push_back(iid);
+					}
+					testIMeshCache.setModel(iid, worldPosition, debugRadians, nullptr);
+					} break;
+				}
+				break;
 			case SDL_QUIT:
 				quit = true;
 				break;
@@ -170,21 +126,21 @@ int main(int argc, char** argv)
 			// MAIN LOOP LOGIC //
 			if(logicClock.getElapsedTime() <= k10::MAX_LOGIC_TIME_PER_FRAME)
 			{
-				for (size_t m = 0; m < modelTranslations.size(); m += modelsPerJob)
-				{
-					const JobDataProcessModels job = {
-						modelTranslations.data(),
-						modelRadians.data(),
-						min(modelTranslations.size() - m, size_t(modelsPerJob)), // modelCount
-						m, // modelOffset
-						MESH_AABB, NUM_MESH_COLS
-					};
-					threadPool.postJob(job);
-				}
-				while (!threadPool.allWorkFinished())
-				{
-					// Spin the main thread while waiting for jobs to complete //
-				}
+///				for (size_t m = 0; m < modelTranslations.size(); m += modelsPerJob)
+///				{
+///					const JobDataProcessModels job = {
+///						modelTranslations.data(),
+///						modelRadians.data(),
+///						min(modelTranslations.size() - m, size_t(modelsPerJob)), // modelCount
+///						m, // modelOffset
+///						MESH_AABB, NUM_MESH_COLS
+///					};
+///					k10::gThreadPool.postJob(job);
+///				}
+///				while (!k10::gThreadPool.allWorkFinished())
+///				{
+///					// Spin the main thread while waiting for jobs to complete //
+///				}
 				logicTicks++;
 			}
 			else
@@ -201,35 +157,36 @@ int main(int argc, char** argv)
 		///			k10::FIXED_SECONDS_PER_FRAME.count();
 		///	const state = previousState*(1 - interFrameRatio) + 
 		///				  currentState*interFrameRatio
-		///glViewport(0, 0,1280,720);
-		window->clear({ 0.2f, 0.2f, 0.2f, 1.f });
+		k10::gWindow->clear({ 0.1f, 0.1f, 0.1f, 1.f });
 		// MAIN DRAW LOGIC //
 		{
+			k10::gWindow->use();
+			GfxProgram::use(&k10::gProgTextureless);
+			testIMeshCache.draw(k10::gVaTextureless);
 			guiFrameDiagData.draw();
-			// debug data size GUI //
+			// debug instance GUI //
 			{
-				int models_size = static_cast<int>(modelTranslations.size());
 				ImGui::Begin("DEBUG");
-				ImGui::SliderInt("models.size()", &models_size, 1, 1200000);
-				ImGui::InputInt("models.size() set", &models_size);
-				ImGui::InputInt("modelsPerJob", (int*)&modelsPerJob);
-				ImGui::End();
-				if (models_size != modelTranslations.size())
+				ImGui::SliderFloat("rad", &debugRadians, 0, 2*k10::PI);
+				ImGui::Separator();
+				stringstream ssInstances;
+				for (InstancedMeshCache::InstanceId i : iids)
 				{
-					modelTranslations.resize(models_size);
-					modelRadians     .resize(models_size);
-					gVbModelTranslation.resize(models_size);
-					gVbModelRadians    .resize(models_size);
+					ssInstances << i << ",";
 				}
+				ImGui::Text("%s", ssInstances.str().c_str());
+				ImGui::InputInt("iid", &debugInstanceId);
+				if (ImGui::Button("destroy tri"))
+				{
+					testIMeshCache.destroyInstance(meshIdTriangle, debugInstanceId);
+					auto findIt = std::find(iids.begin(), iids.end(), debugInstanceId);
+					SDL_assert(findIt != iids.end());
+					iids.erase(findIt);
+				}
+				ImGui::End();
 			}
-			gVbModelTranslation.update(modelTranslations.data());
-			gVbModelRadians    .update(modelRadians.data());
-			//glDrawArrays(GL_TRIANGLES, 0, 3);
-			glDrawArraysInstanced(GL_TRIANGLES, 0, 3, static_cast<GLsizei>(modelTranslations.size()));
-///			glUseProgram(NULL);
-///			glBindVertexArray(NULL);
 		}
-		window->swapBuffer();
+		k10::gWindow->swapBuffer();
 	}
 	return cleanup(EXIT_SUCCESS);
 }

@@ -1,4 +1,12 @@
 #include "pch.h"
+namespace k10
+{
+	Window* gWindow;
+	ThreadPool gThreadPool;
+	VertexArray gVaTextureless;
+	GlobalUniformBuffer gGlobalUniformBuffer;
+	GfxProgram gProgTextureless;
+}
 vector<u8> k10::readFile(string const& fileName)
 {
 	vector<u8> retVal;
@@ -59,4 +67,68 @@ vector<u8> k10::readFile(string const& fileName)
 		return {};
 	}
 	return retVal;
+}
+bool k10::initializeGlobalAppData()
+{
+	SDL_Log("========== CPU Attributes ==================\n");
+	SDL_Log("\tLogic core count=%i\n", SDL_GetCPUCount());
+	SDL_Log("\tL1 cache line size=%i bytes\n", SDL_GetCPUCacheLineSize());
+	SDL_Log("============================================\n");
+	// As soon as possible (when SDL is initialized), spawn our job thread pool //
+	const size_t desiredThreadPoolSize = max(SDL_GetCPUCount() - 1, 1);
+	SDL_Log("Creating ThreadPool with %lli worker threads...\n", desiredThreadPoolSize);
+	gThreadPool.create(desiredThreadPoolSize);
+	// As soon as our job thread pool is running, create our application window.
+	//	This way, we could potentially do work while the main thread is 
+	//	communicating w/ the OS to create a window, drawing context, etc... //
+	gWindow = Window::create("modern-opengl-test", { 1280,720 });
+	if (!gWindow)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+					 "Window creation failed!\n");
+		return false;
+	}
+	if (!gVaTextureless.create(VertexArray::VertexType::TEXTURELESS_MESH_INSTANCES))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+					 "Failed to create textureless Vertex Array Object!\n");
+		return false;
+	}
+	if (!gGlobalUniformBuffer.create())
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+					 "Failed to create GlobalUniformBuffer!\n");
+		return false;
+	}
+	return true;
+}
+void k10::cleanupGlobalAppData()
+{
+	gVaTextureless.destroy();
+	gGlobalUniformBuffer.destroy();
+	gThreadPool.destroy();
+	if (gWindow)
+	{
+		Window::destroy(gWindow);
+		gWindow = nullptr;
+	}
+}
+bool k10::loadGlobalAssets()
+{
+	if (!gProgTextureless.load("shader-bin/simple-draw-vert.spv", 
+							   "shader-bin/simple-draw-frag.spv"))
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+					 "Failed to load textureless GfxProgram!\n");
+		return false;
+	}
+	else
+	{
+		SDL_Log("Loaded textureless GfxProgram!\n");
+	}
+	return true;
+}
+void k10::cleanupGlobalAssets()
+{
+	gProgTextureless.free();
 }

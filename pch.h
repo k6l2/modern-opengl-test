@@ -45,24 +45,37 @@ using std::atomic;
 #include <queue>
 using std::queue;
 #include "Time.h"
+#include "Window.h"
+#include "GfxProgram.h"
+#include "VertexArray.h"
+#include "GlobalUniformBuffer.h"
+#include "ThreadPool.h"
 namespace k10
 {
+	// GLOBAL CONSTANTS //
 	const int FIXED_FRAMES_PER_SECOND = 240;
-///	const std::chrono::duration<double> FIXED_SECONDS_PER_FRAME =
-///		std::chrono::duration<double>(1) / FIXED_FRAMES_PER_SECOND;
 	const Time FIXED_TIME_PER_FRAME = Time::seconds(1.f / FIXED_FRAMES_PER_SECOND);
 	const Time MAX_LOGIC_TIME_PER_FRAME = Time::seconds(1.f / 60);
 	const GLint SHADER_BINARY_FORMAT = GL_SHADER_BINARY_FORMAT_SPIR_V;
 	const float PI = glm::pi<float>();
-}
-template<class T>
-inline T clamp(T value, T min, T max)
-{
-	return value < min ? min :
-		value > max ? max :
-		value;
-}
-namespace k10
-{
+	// GLOBAL HELPER FUNCTIONS //
+	template<class T>
+	inline T clamp(T value, T min, T max)
+	{
+		return value < min ? min :
+			value > max ? max :
+			value;
+	}
 	vector<u8> readFile(string const& fileName);
+	bool initializeGlobalAppData();
+	void cleanupGlobalAppData();
+	bool loadGlobalAssets();
+	void cleanupGlobalAssets();
+	// GLOBAL APPLICATION DATA //
+	extern Window* gWindow;
+	extern ThreadPool gThreadPool;
+	extern VertexArray gVaTextureless;
+	extern GlobalUniformBuffer gGlobalUniformBuffer;
+	// GLOBAL ASSETS //
+	extern GfxProgram gProgTextureless;
 }

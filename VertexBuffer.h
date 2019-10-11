@@ -15,8 +15,8 @@ public:
 	bool create(size_t elementCount, GLsizei stride, MemoryUsage usage);
 	void destroy();
 	void resize(size_t elementCount);
-	void update(void const* newData);
-	void update(void const* newData, GLint offset, GLsizei size);
+	void update(void const* newData) const;
+	void update(void const* newData, size_t elementOffset, size_t elementCount) const;
 	void bind(GLuint bufferBindingIndex) const;
 	void bind(GLuint bufferBindingIndex, GLint offset) const;
 private:

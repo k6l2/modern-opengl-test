@@ -1,5 +1,27 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DONE ^^^^^^^^^^^^^^^^^
 -load SPIR-V programs
 -construct GfxPipeline (programs linked together)
 -main loop timing
 -ImGui
+-Ability to create/destroy model instances arbitrarily
+	-Some kind of 'MeshInstanceCache' ?
+		-createMesh(modelVertices, etc) : meshId
+			-perhaps supply a 'maxInstances' parameter on mesh creation
+		-createInstance(meshId) : instanceId
+		-destroyInstance(meshId, instanceId)
+			-the act of 'destroying' an instance can simply be setting the mesh instance scale to be a v2f(0,0) ?
+-Ability to construct arbitrary STATIC meshes and store them all in the same buffer, each with their own offset.
+	-requires using 'glDrawArraysInstancedBaseInstance' with the 'baseinstance' set to the instance offset of this mesh in the instance-divided VBOs
+		-each mesh is allowed a maximum # of instances to be drawn ?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DONE ^^^^^^^^^^^^^^^^^
+-Create a "RenderState" object that keeps track of what Renderer & GfxProgram is currently in use so that whenever we attempt to set these to be used, we don't have to keep actually calling the opengl functions if that object is already set
+-Allow meshes to have multiple 'primitive batches', each containing their own vertex data, primitive type, (potentially blend function?)
+	-Create a circle mesh w/ an outline & a radian indicating the model's rotation
+-Simulation object - hold the entire current state of the simulation & interface with it (control input, render output, execute a logical step)
+-Allow view to be moved around (and zoomed?)
+-Create a simulation with simple circle objects moving around a box
+	-if the objects leave the box, destroy it and spawn a new actor at a random location w/ random speed
+-Test performance of setting model translation/rotation to random mesh instance offsets
+-COLLISION DETECTION
+-SPATIAL PARTITIONER
+-Figure out the stupid GLM memory alignment issue I had in GlobalUniformBuffer
+	-do I even need the GLM_FORCE_ALIGNED_GENTYPES shit in the pch?

@@ -1,10 +1,13 @@
 #include "GlobalUniformBuffer.h"
+// our uniform matrix block needs to be reloaded once per frame in most cases,
+//	because the View matrix is almost never going to be static //
+const GLenum GlobalUniformBuffer::BUFFER_MEMORY_USAGE = GL_STREAM_DRAW;
 bool GlobalUniformBuffer::create()
 {
 	destroy();
 	glGenBuffers(1, &bufferObject);
 	glBindBuffer(GL_UNIFORM_BUFFER, bufferObject);
-	glBufferData(GL_UNIFORM_BUFFER, getSize(), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, getSize(), NULL, BUFFER_MEMORY_USAGE);
 	glBindBuffer(GL_UNIFORM_BUFFER, NULL);
 	const GLenum oglStatus = glGetError();
 	if (oglStatus != GL_NO_ERROR)
@@ -33,7 +36,7 @@ void GlobalUniformBuffer::update(glm::mat4 const& projection3d,
 {
 	SDL_assert(bufferObject);
 	glBindBuffer(GL_UNIFORM_BUFFER, bufferObject);
-	glBufferData(GL_UNIFORM_BUFFER, getSize(), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, getSize(), NULL, BUFFER_MEMORY_USAGE);
 	GlobalMatrixBlock gmb;
 	gmb.projection3d = projection3d;
 	gmb.view2d       = glm::mat3(
