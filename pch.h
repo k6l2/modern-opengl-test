@@ -17,6 +17,7 @@ using i64 = Sint64;
 #include "glm/glm.hpp"
 #include "glm/gtx/string_cast.hpp"
 #include "glm/gtx/matrix_transform_2d.hpp"
+#include "glm/gtx/rotate_vector.hpp"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtc/type_aligned.hpp"
 using v2f = glm::vec2;

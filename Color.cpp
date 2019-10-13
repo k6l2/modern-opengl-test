@@ -24,6 +24,13 @@ Color::Color(float r, float g, float b, float a)
 	this->b = static_cast<Uint8>(b * 255);
 	this->a = static_cast<Uint8>(a * 255);
 }
+Color::Color(Color const& other)
+{
+	r = other.r;
+	g = other.g;
+	b = other.b;
+	a = other.a;
+}
 float Color::fR() const
 {
 	return r / 255.f;

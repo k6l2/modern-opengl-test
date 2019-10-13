@@ -10,6 +10,9 @@ void GfxProgram::use(GfxProgram* gProg)
 		return;
 	}
 	glUseProgram(gProg->programId);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_DEPTH_TEST);
 }
 bool GfxProgram::load(string const& shaderSpirvBinaryFilenameVertex,
 					  string const& shaderSpirvBinaryFilenameFragment)

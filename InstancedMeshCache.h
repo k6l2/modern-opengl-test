@@ -7,6 +7,7 @@
 //	drawing techniques, outlined in these wiki pages:
 //	https://www.khronos.org/opengl/wiki/Vertex_Specification#Separate_attribute_format
 //	https://www.khronos.org/opengl/wiki/Vertex_Rendering#Instancing
+// Drawing is performed using OpenGL 4.2 feature 'glDrawArraysInstancedBaseInstance'
 class InstancedMeshCache
 {
 public:
@@ -23,7 +24,8 @@ public:
 	MeshId addMesh(vector<v2f> const& vertexPositions, 
 				   vector<Color> const& vertexColors,
 				   InstanceId maxInstanceCount,
-				   GLenum primitiveType);
+				   vector<GLenum> const& primitiveTypes,
+				   vector<GLint> const& primitiveVertexCounts);
 	InstanceId createInstance(MeshId mid);
 	void destroyInstance(MeshId mid, InstanceId iid);
 	void setModel(InstanceId iid, v2f const& translation, float radians,
@@ -31,17 +33,20 @@ public:
 	// this function does two things:
 	//	1) sends the contents of the instance buffers => GPU
 	//	2) submits the OpenGL draw calls
-	///TODO: blending function
 	void draw(VertexArray const& vaTextureless);
 private:
 	size_t maxTotalMeshVertexCount;
 	InstanceId maxTotalInstances;
-	struct MeshData
+	struct PrimitiveBatch
 	{
-		// VertexBuffer meta data //
 		GLenum primitiveType;
 		GLint modelVertexStartIndex;
 		GLsizei modelVertexCount;
+	};
+	struct MeshData
+	{
+		// VertexBuffer meta data //
+		vector<PrimitiveBatch> primitiveBatches;
 		InstanceId instanceCount;
 		GLuint baseInstance;
 		// instance lookup //

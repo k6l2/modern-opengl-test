@@ -29,7 +29,7 @@ bool InstancedMeshCache::create(size_t maxTotalMeshVertexCount,
 		return false;
 	}
 	if (!vbInstanceModelScale.create(maxTotalInstances, sizeof(v2f),
-									 VertexBuffer::MemoryUsage::DYNAMIC))
+									 VertexBuffer::MemoryUsage::STREAM))
 	{
 		SDL_assert(false);
 		return false;
@@ -51,10 +51,13 @@ InstancedMeshCache::MeshId
 	InstancedMeshCache::addMesh(vector<v2f> const& vertexPositions,
 								vector<Color> const& vertexColors,
 								InstanceId maxInstanceCount,
-								GLenum primitiveType)
+								vector<GLenum> const& primitiveTypes,
+								vector<GLint> const& primitiveVertexCounts)
 {
 	SDL_assert(vertexPositions.size() == vertexColors.size());
 	SDL_assert(maxInstanceCount > 0);
+	SDL_assert(!primitiveTypes.empty());
+	SDL_assert(primitiveTypes.size() == primitiveVertexCounts.size());
 	const GLuint baseInstance = meshData.empty() ? 0 :
 		meshData.back().baseInstance + 
 			meshData.back().instanceCount;
@@ -63,27 +66,44 @@ InstancedMeshCache::MeshId
 	{
 		availableInstanceIds[iid] = static_cast<InstanceId>(baseInstance + iid);
 	}
+	vector<PrimitiveBatch> primitiveBatches(primitiveTypes.size());
+	GLint currModelVertexStartIndex = meshData.empty() ? 0 :
+		meshData.back().primitiveBatches.back().modelVertexStartIndex +
+			meshData.back().primitiveBatches.back().modelVertexCount;
+	for (size_t p = 0; p < primitiveTypes.size(); p++)
+	{
+		const PrimitiveBatch pBatch = {
+			primitiveTypes[p],
+			currModelVertexStartIndex,
+			primitiveVertexCounts[p]
+		};
+		primitiveBatches[p] = pBatch;
+		currModelVertexStartIndex += primitiveVertexCounts[p];
+	}
 	const MeshData newMeshDat
 	{
-		primitiveType,
-		meshData.empty() ? 0 : 
-			meshData.back().modelVertexStartIndex +
-				meshData.back().modelVertexCount,// modelVertexStartIndex
-		static_cast<GLsizei>(vertexPositions.size()),// modelVertexCount
+		primitiveBatches,
+///		meshData.empty() ? 0 : 
+///			meshData.back().modelVertexStartIndex +
+///				meshData.back().modelVertexCount,// modelVertexStartIndex
+///		static_cast<GLsizei>(vertexPositions.size()),// modelVertexCount
 		maxInstanceCount,// instanceCount
 		baseInstance,// baseInstance
 		availableInstanceIds,// availableInstanceIds
 		0// nextAvailableInstanceIdIndex
 	};
-	if (newMeshDat.modelVertexStartIndex + vertexPositions.size() >
+	if (primitiveBatches.front().modelVertexStartIndex + 
+				vertexPositions.size() >
 			maxTotalMeshVertexCount)
 	{
 		SDL_assert(false);
 		return INVALID_MESH_ID;
 	}
-	vbPosition.update(vertexPositions.data(), newMeshDat.modelVertexStartIndex,
+	vbPosition.update(vertexPositions.data(), 
+					  primitiveBatches.front().modelVertexStartIndex,
 					  vertexPositions.size());
-	vbColor.update(vertexColors.data(), newMeshDat.modelVertexStartIndex,
+	vbColor.update(vertexColors.data(),
+				   primitiveBatches.front().modelVertexStartIndex,
 				   vertexColors.size());
 	SDL_assert(meshData.size() < INVALID_MESH_ID);
 	MeshId retVal = static_cast<MeshId>(meshData.size());
@@ -106,7 +126,8 @@ InstancedMeshCache::InstanceId InstancedMeshCache::createInstance(MeshId mid)
 	//	don't accidentally forget to do this and not know why it isn't showing
 	//	up.
 	instanceModelScale[retVal] = v2f(1,1);
-	instanceScalesDirty = true;
+	//vbInstanceModelScale.update(&instanceModelScale[retVal], retVal, 1);
+///	instanceScalesDirty = true;
 	return retVal;
 }
 void InstancedMeshCache::destroyInstance(MeshId mid, InstanceId iid)
@@ -114,7 +135,8 @@ void InstancedMeshCache::destroyInstance(MeshId mid, InstanceId iid)
 	SDL_assert(mid < meshData.size());
 	SDL_assert(iid < instanceModelScale.size());
 	instanceModelScale[iid] = v2f(0, 0);
-	instanceScalesDirty = true;
+	//vbInstanceModelScale.update(&instanceModelScale[iid], iid, 1);
+///	instanceScalesDirty = true;
 	MeshData& mDat = meshData[mid];
 #ifndef NDEBUG
 	// Check to make sure that iid has not already been destroyed.  If we have
@@ -137,16 +159,18 @@ void InstancedMeshCache::setModel(InstanceId iid,
 	if (scale)
 	{
 		instanceModelScale[iid] = *scale;
-		instanceScalesDirty = true;
+		//vbInstanceModelScale.update(&instanceModelScale[iid], iid, 1);
+///		instanceScalesDirty = true;
 	}
 }
 void InstancedMeshCache::draw(VertexArray const& vaTextureless)
 {
 	vbInstanceModelTranslation.update(instanceModelTranslations.data());
 	vbInstanceModelRadians    .update(instanceModelRadians.data());
+	vbInstanceModelScale      .update(instanceModelScale.data());
 	if (instanceScalesDirty)
 	{
-		vbInstanceModelScale.update(instanceModelScale.data());
+		//vbInstanceModelScale.update(instanceModelScale.data());
 		instanceScalesDirty = false;
 	}
 	VertexArray::use(&vaTextureless, k10::gGlobalUniformBuffer,
@@ -154,8 +178,11 @@ void InstancedMeshCache::draw(VertexArray const& vaTextureless)
 					 	&vbInstanceModelRadians, &vbInstanceModelScale} );
 	for (MeshData const& meshDat : meshData)
 	{
-		glDrawArraysInstancedBaseInstance(meshDat.primitiveType,
-			meshDat.modelVertexStartIndex, meshDat.modelVertexCount,
-			meshDat.instanceCount, meshDat.baseInstance);
+		for (PrimitiveBatch const& pBatch : meshDat.primitiveBatches)
+		{
+			glDrawArraysInstancedBaseInstance(pBatch.primitiveType,
+				pBatch.modelVertexStartIndex, pBatch.modelVertexCount,
+				meshDat.instanceCount, meshDat.baseInstance);
+		}
 	}
 }
