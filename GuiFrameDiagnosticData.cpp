@@ -16,12 +16,32 @@ void GuiFrameDiagnosticData::draw() const
 					{
 						return a.milliseconds < b.milliseconds;
 					});
+	auto minMsIt = 
+		max_element(frameDiagData.begin(), frameDiagData.end(), 
+					[](FrameDiagnosticData const& a, 
+					   FrameDiagnosticData const& b)->bool
+					{
+						return a.milliseconds > b.milliseconds;
+					});
+	float avgMs = 0;
+	for (auto const& frame : frameDiagData)
+	{
+		avgMs += frame.milliseconds;
+	}
+	avgMs /= frameDiagData.size();
 	auto maxLogicIt = 
 		max_element(frameDiagData.begin(), frameDiagData.end(), 
 					[](FrameDiagnosticData const& a, 
 					   FrameDiagnosticData const& b)->bool
 					{
 						return a.logicFrames < b.logicFrames;
+					});
+	auto minLogicIt = 
+		max_element(frameDiagData.begin(), frameDiagData.end(), 
+					[](FrameDiagnosticData const& a, 
+					   FrameDiagnosticData const& b)->bool
+					{
+						return a.logicFrames > b.logicFrames;
 					});
 	auto maxWastedLogicIt = 
 		max_element(frameDiagData.begin(), frameDiagData.end(), 
@@ -30,42 +50,49 @@ void GuiFrameDiagnosticData::draw() const
 					{
 						return a.wastedLogicFrames < b.wastedLogicFrames;
 					});
-	string strMaxMs;
-	string strMaxLogic;
-	string strMaxWasted;
+	auto minWastedLogicIt = 
+		max_element(frameDiagData.begin(), frameDiagData.end(), 
+					[](FrameDiagnosticData const& a, 
+					   FrameDiagnosticData const& b)->bool
+					{
+						return a.wastedLogicFrames > b.wastedLogicFrames;
+					});
+	string strMs;
+	string strLogic;
+	string strWasted;
 	{
-		stringstream ssMaxMs;
-		ssMaxMs << "max=" << maxMsIt->milliseconds;
-		strMaxMs = ssMaxMs.str();
+		stringstream ss;
+		ss << "["<< minMsIt->milliseconds<<"," << maxMsIt->milliseconds<<"] ~"<< int(avgMs);
+		strMs = ss.str();
 	}
 	{
-		stringstream ssMaxLogic;
-		ssMaxLogic << "max=" << maxLogicIt->logicFrames;
-		strMaxLogic = ssMaxLogic.str();
+		stringstream ss;
+		ss << "[" << minLogicIt->logicFrames << "," << maxLogicIt->logicFrames << "]";
+		strLogic = ss.str();
 	}
 	{
-		stringstream ssMaxWasted;
-		ssMaxWasted << "max=" << maxWastedLogicIt->wastedLogicFrames;
-		strMaxWasted = ssMaxWasted.str();
+		stringstream ss;
+		ss << "[" << minWastedLogicIt->wastedLogicFrames << "," << maxWastedLogicIt->wastedLogicFrames << "]";
+		strWasted = ss.str();
 	}
 	ImGui::Begin("DEBUG Frame Diagnostics");
 	ImGui::PlotHistogram("ms", (float*)(&frameDiagData[0].milliseconds),
 						 (int)frameDiagData.size(),
 						 frameDiagDataOffset,
-						 strMaxMs.c_str(),
+						 strMs.c_str(),
 						 FLT_MAX, FLT_MAX, ImVec2(0, 80), 
 						 sizeof(FrameDiagnosticData));
 	ImGui::PlotHistogram("logic ticks", (float*)(&frameDiagData[0].logicFrames),
 						 (int)frameDiagData.size(),
 						 frameDiagDataOffset,
-						 strMaxLogic.c_str(), 
+						 strLogic.c_str(), 
 						 FLT_MAX, FLT_MAX, ImVec2(0, 80), 
 						 sizeof(FrameDiagnosticData));
 	ImGui::PlotHistogram("wasted logic ticks", 
 						 (float*)(&frameDiagData[0].wastedLogicFrames),
 						 (int)frameDiagData.size(),
 						 frameDiagDataOffset,
-						 strMaxWasted.c_str(), 
+						 strWasted.c_str(), 
 						 FLT_MAX, FLT_MAX, ImVec2(0, 80), 
 						 sizeof(FrameDiagnosticData));
 	ImGui::End();
