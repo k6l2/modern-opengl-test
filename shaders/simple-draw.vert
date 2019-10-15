@@ -26,10 +26,10 @@ void main()
 		0           , 0           , 1, 0,
 		0           , 0           , 0, 1);
 	const mat4 matModelRotation = mat4(
-		cos(modelRadians), -sin(modelRadians), 0, 0,
-		sin(modelRadians),  cos(modelRadians), 0, 0,
-		0                ,  0                , 1, 0,
-		0                ,  0                , 0, 1);
+		 cos(modelRadians), sin(modelRadians), 0, 0,
+		-sin(modelRadians), cos(modelRadians), 0, 0,
+		 0                , 0                , 1, 0,
+		 0                , 0                , 0, 1);
 	const mat4 matModelTranslation = mat4(
 		1                 , 0                 , 0, 0,
 		0                 , 1                 , 0, 0,
