@@ -8,7 +8,13 @@
 //	https://www.khronos.org/opengl/wiki/Vertex_Specification#Separate_attribute_format
 //	https://www.khronos.org/opengl/wiki/Vertex_Rendering#Instancing
 // Drawing is performed using OpenGL 4.2 feature 'glDrawArraysInstancedBaseInstance'
-///TODO: rename this class to InstancedMeshBatcher
+// A mesh cache does not care about draw order (either at the instance orders, 
+//	or the mesh batch orders), so the caller is responsible for ordering the 
+//	instance model data & the mesh data.
+///TODO: rename this to 'DynamicInstancedMeshCache' since there is the 
+///	implication that the instances of these meshes are very likely to change
+///	between every frame?  Or perhaps just manage two types of MeshData: 
+///	dynamic & static mesh instances.
 class InstancedMeshCache
 {
 public:
@@ -31,16 +37,17 @@ public:
 				size_t maxTotalInstances,
 				size_t maxBatchCount);
 	void destroy();
-	MeshId addMesh(vector<v2f> const& vertexPositions, 
+	MeshId addMesh(size_t maxInstances,
+				   vector<v2f> const& vertexPositions, 
 				   vector<Color> const& vertexColors,
 				   vector<GLenum> const& primitiveTypes,
 				   vector<GLint> const& primitiveVertexCounts);
-	///TODO: make this thread-safe
-	void batchModel(MeshId mid, v2f const& translation, float radians,
-					v2f const& scale);
+	void updateMeshInstances(MeshId mid, size_t instanceCount,
+							 v2f const* instanceModelTranslations, 
+							 float const* instanceModelRadians,
+							 v2f const* instanceModelScales);
 	// draw performs the following tasks:
 	//	-sets up the gfx pipeline to use the correct VAO(s)
-	//	-sends the contents of the instance buffers => GPU
 	//	-submits the OpenGL draw calls
 	void draw(VertexArray const& vaTextureless);
 private:
@@ -56,6 +63,9 @@ private:
 	struct MeshData
 	{
 		vector<PrimitiveBatch> primitiveBatches;
+		GLuint baseInstance;
+		GLsizei instanceCount;
+		GLsizei instanceCountMax;
 	};
 	// There is no maximum # of meshes allowed because it is assumed that the
 	//	user is going to build a relatively small # of meshes very few times
@@ -63,17 +73,6 @@ private:
 	//	times via batches.  Therefore we can assume minimal impact of 
 	//	dynamically allocating more space for additional mesh data as needed.
 	vector<MeshData> meshData;
-	struct MeshBatch
-	{
-		size_t meshIndex;
-		GLuint baseInstance;
-		GLsizei instanceCount;
-	};
-	vector<MeshBatch> batches;
-	// initialized to -1 at the beginning of the first frame & after ever call 
-	//	to 'draw'.  This value directs calls to 'batchModel' which part of the
-	//	'batches' array it should operate on.
-	int currentBatchIndex;
 	// static mesh per-vertex data buffers //
 	VertexBuffer vbPosition;
 	VertexBuffer vbColor;
@@ -81,8 +80,4 @@ private:
 	VertexBuffer vbInstanceModelTranslation;
 	VertexBuffer vbInstanceModelRadians;
 	VertexBuffer vbInstanceModelScale;
-	// CPU data buffers that will get sent to the GPU //
-	vector<v2f>   instanceModelTranslations;
-	vector<float> instanceModelRadians;
-	vector<v2f>   instanceModelScale;
 };

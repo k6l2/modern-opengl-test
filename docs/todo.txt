@@ -21,14 +21,15 @@
 			-if the draw request is new, start a new Batch {MeshId, first instance offset, # instances }
 			-if the draw request is the same as the last, add the draw instance to the current batch
 		-once per frame, flush batches.  Each batch is just a bunch of copies of a single mesh.  Each batch requires the same # of draw calls as the # of primitive batches for the mesh.  The most optimal usage is to submit draw requests already Z-ordered, and with all the same meshes requested contiguously for each layer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DONE ^^^^^^^^^^^^^^^^^
 	-Nope, the above method is too slow because it requires an extra pass over the model transform components (to send them into the mesh instance manager object), and this cannot be multi-threaded because we would lose draw order.  
 		-It's probably best to pre-define max instance # per-mesh like before, keep model transform components contiguous, and just set the instance count per-mesh.
 		-remove CPU data buffers from InstancedMeshCache
 		-Instance creation/destruction is handled by whatever system is holding the CPU model transform data
 		-This means that each frame, instead of performing a single VBO update on each model transform component, we perform one sub-update per mesh aligned to the mesh's designated instance VBO range
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ DONE ^^^^^^^^^^^^^^^^^
 -Create a "RenderState" object that keeps track of what Renderer & GfxProgram is currently in use so that whenever we attempt to set these to be used, we don't have to keep actually calling the opengl functions if that object is already set
 -Simulation object - hold the entire current state of the simulation & interface with it (control input, render output, execute a logical step)
+	-component arrays for mesh instance transforms
 -Allow view to be moved around (and zoomed?)
 -Create a simulation with simple circle objects moving around a box
 	-if the objects leave the box, destroy it and spawn a new actor at a random location w/ random speed
