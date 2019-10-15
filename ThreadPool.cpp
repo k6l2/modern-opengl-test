@@ -72,6 +72,7 @@ int ThreadPool::workerThreadMain(void* data)
 					currentJobProcessModels.meshAabb * v2f(meshCol, meshRow);
 				currentJobProcessModels.modelsRadians[m] +=
 					RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
+				currentJobProcessModels.modelsScales[m] = v2f(20, 20);
 			}
 		}
 		tpOwner->jobsCompleted++;

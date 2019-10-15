@@ -9,11 +9,22 @@ struct JobDataProcessModels
 {
 	v2f* modelsTranslation;
 	float* modelsRadians;
+	v2f* modelsScales;
 	size_t modelCount;
 	size_t modelOffset;
 	v2f meshAabb;
 	size_t numMeshCols;
 };
+//struct JobDataBatchModels
+//{
+//	v2f* modelsTranslation;
+//	float* modelsRadians;
+//	v2f* modelsScales;
+//	size_t modelCount;
+//	size_t modelOffset;
+//	u16 meshId;
+//	class InstancedMeshCache* imc;
+//};
 class ThreadPool
 {
 public:

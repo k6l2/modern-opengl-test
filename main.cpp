@@ -38,7 +38,8 @@ int main(int argc, char** argv)
 		return cleanup(EXIT_FAILURE);
 	}
 	// instanced 2D mesh testing //
-	if (!testIMeshCache.create(1000, 1000002))
+	//	1081080 is the first anti-prime above 1 million~
+	if (!testIMeshCache.create(1000, 1081080, 100))
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
 					 "Failed to create testIMeshCache!\n");
@@ -54,7 +55,7 @@ int main(int argc, char** argv)
 			v2f(0             , -MESH_AABB.y/2),
 			v2f( MESH_AABB.x/2,  MESH_AABB.y/2) };
 		vector<Color> colors = { Color::Red, Color::Green, Color::Blue };
-		meshIdTriangle = testIMeshCache.addMesh(positions, colors, 1, 
+		meshIdTriangle = testIMeshCache.addMesh(positions, colors,
 												{GL_TRIANGLES}, {3});
 	}
 	// create a circle mesh w/ radius of 1
@@ -62,7 +63,7 @@ int main(int argc, char** argv)
 		static const size_t circlePointCount = 30;
 		static const float radiansPerPoint = 2*k10::PI / circlePointCount;
 		vector<v2f> positionsFill(circlePointCount + 2);
-		vector<v2f> positionsOutline(circlePointCount + 1);
+		vector<v2f> positionsOutline(circlePointCount + 2);
 		vector<Color> colorsFill(positionsFill.size());
 		vector<Color> colorsOutline(positionsOutline.size());
 		positionsFill[0] = v2f(0, 0);
@@ -74,7 +75,8 @@ int main(int argc, char** argv)
 			positionsOutline[c]  = point;
 		}
 		positionsFill   .back() = v2f(1, 0);
-		positionsOutline.back() = v2f(1, 0);
+		positionsOutline[positionsOutline.size() - 2] = v2f(1, 0);
+		positionsOutline[positionsOutline.size() - 1] = v2f(0, 0);
 		for (size_t c = 0; c < colorsFill.size(); c++)
 		{
 			colorsFill[c] = Color(1.f, 1.f, 1.f, 0.2f);
@@ -90,7 +92,7 @@ int main(int argc, char** argv)
 		colorsFill.insert(std::end(colorsFill), 
 			std::begin(colorsOutline), std::end(colorsOutline));
 		meshIdCircle = testIMeshCache.addMesh(positionsFill, colorsFill,
-			1000000, {GL_TRIANGLE_FAN, GL_LINE_STRIP}, 
+			{GL_TRIANGLE_FAN, GL_LINE_STRIP}, 
 			{static_cast<GLint>(positionsFill.size() - positionsOutline.size()), 
 			 static_cast<GLint>(positionsOutline.size())});
 //		meshIdCircle = testIMeshCache.addMesh(positionsFill, colorsFill,
@@ -104,19 +106,26 @@ int main(int argc, char** argv)
 		vector<Color> colors = {
 			Color::Red, Color::Red,
 			Color::Green, Color::Green };
-		meshIdOrigin = testIMeshCache.addMesh(positions, colors, 1, 
+		meshIdOrigin = testIMeshCache.addMesh(positions, colors,
 											  { GL_LINES }, { 4 });
 	}
-	const InstancedMeshCache::InstanceId instanceOrigin =
-		testIMeshCache.createInstance(meshIdOrigin);
-	const v2f originScale = v2f(100, 100);
-	testIMeshCache.setModel(instanceOrigin, v2f(0, 0), 0, &originScale);
 	// MAIN APPLICATION LOOP //////////////////////////////////////////////////
+	static const v2f MESH_AABB = v2f(40,40);
+	const size_t NUM_MESH_COLS = static_cast<size_t>(k10::gWindow->getSize().x / MESH_AABB.x);
+	vector<v2f> circlePositions(1000);
+	vector<float> circleRadians(1000);
+	vector<v2f> circleScales(1000, v2f(20,20));
+	for (size_t c = 0; c < circlePositions.size(); c++)
+	{
+		circleRadians[c] = c * k10::PI * 0.1f;
+	}
+	circlePositions.reserve(1000000);
+	circleRadians.reserve(1000000);
+	circleScales.reserve(1000000);
+	size_t modelsPerJob = 1000;
+	float debugRadians = 0;
 	Time frameTimeAccumulator;
 	Clock frameClock;
-	float debugRadians = 0;
-	int debugInstanceId = 0;
-	vector<InstancedMeshCache::InstanceId> iids;
 	GfxProgram::use(&k10::gProgTextureless);
 	while (true)
 	{
@@ -134,19 +143,23 @@ int main(int argc, char** argv)
 					const v2f worldPosition = 
 						k10::gWindow->transformToWorldSpace(
 							{ event.button.x, event.button.y });
+					circlePositions.push_back(worldPosition);
+					circleRadians.push_back(debugRadians);
+					circleScales.push_back(v2f(20, 20));
 ///					SDL_Log("left click @ [%i,%i]::window-space "
 ///							"[%f,%f]::world-space\n",
 ///							event.button.x, event.button.y,
 ///							worldPosition.x, worldPosition.y);
 					// Create a triangle mesh at this location //
-					const InstancedMeshCache::InstanceId iid = 
-						testIMeshCache.createInstance(meshIdCircle);
+///					const InstancedMeshCache::InstanceId iid = 
+///						testIMeshCache.createInstance(meshIdCircle);
 ///					if (iid != InstancedMeshCache::INVALID_INSTANCE_ID)
 ///					{
 ///						iids.push_back(iid);
 ///					}
-					const v2f scale = { 20,20 };
-					testIMeshCache.setModel(iid, worldPosition, debugRadians, &scale);
+///					const v2f scale = { 20,20 };
+///					testIMeshCache.setModel(iid, worldPosition, debugRadians, &scale);
+///					testIMeshCache.batchModel(meshIdCircle, worldPosition, debugRadians, scale);
 					} break;
 				}
 				break;
@@ -170,21 +183,22 @@ int main(int argc, char** argv)
 			// MAIN LOOP LOGIC //
 			if(logicClock.getElapsedTime() <= k10::MAX_LOGIC_TIME_PER_FRAME)
 			{
-///				for (size_t m = 0; m < modelTranslations.size(); m += modelsPerJob)
-///				{
-///					const JobDataProcessModels job = {
-///						modelTranslations.data(),
-///						modelRadians.data(),
-///						min(modelTranslations.size() - m, size_t(modelsPerJob)), // modelCount
-///						m, // modelOffset
-///						MESH_AABB, NUM_MESH_COLS
-///					};
-///					k10::gThreadPool.postJob(job);
-///				}
-///				while (!k10::gThreadPool.allWorkFinished())
-///				{
-///					// Spin the main thread while waiting for jobs to complete //
-///				}
+				for (size_t m = 0; m < circlePositions.size(); m += modelsPerJob)
+				{
+					const JobDataProcessModels job = {
+						circlePositions.data(),
+						circleRadians.data(),
+						circleScales.data(),
+						min(circlePositions.size() - m, size_t(modelsPerJob)), // modelCount
+						m, // modelOffset
+						MESH_AABB, NUM_MESH_COLS
+					};
+					k10::gThreadPool.postJob(job);
+				}
+				while (!k10::gThreadPool.allWorkFinished())
+				{
+					// Spin the main thread while waiting for jobs to complete //
+				}
 				logicTicks++;
 			}
 			else
@@ -204,30 +218,27 @@ int main(int argc, char** argv)
 		k10::gWindow->clear({ 0.1f, 0.1f, 0.1f, 1.f });
 		// MAIN DRAW LOGIC //
 		{
-			k10::gWindow->use();
-			testIMeshCache.draw(k10::gVaTextureless);
-			guiFrameDiagData.draw();
-			// debug instance GUI //
+			// DEBUG TESTING GUI //
 			{
 				ImGui::Begin("DEBUG");
-				ImGui::SliderFloat("rad", &debugRadians, 0, 2*k10::PI);
-				ImGui::Separator();
-				stringstream ssInstances;
-				for (InstancedMeshCache::InstanceId i : iids)
+				int actorCount = static_cast<int>(circlePositions.size());
+				if (ImGui::SliderInt("actorCount", &actorCount, 0, 1000000))
 				{
-					ssInstances << i << ",";
-				}
-				ImGui::Text("%s", ssInstances.str().c_str());
-				ImGui::InputInt("iid", &debugInstanceId);
-				if (ImGui::Button("destroy tri"))
-				{
-					testIMeshCache.destroyInstance(meshIdTriangle, debugInstanceId);
-					auto findIt = std::find(iids.begin(), iids.end(), debugInstanceId);
-					SDL_assert(findIt != iids.end());
-					iids.erase(findIt);
+					circlePositions.resize(actorCount);
+					circleRadians.resize(actorCount);
+					circleScales.resize(actorCount);
 				}
 				ImGui::End();
 			}
+			testIMeshCache.batchModel(meshIdOrigin, v2f(0, 0), 0.f, v2f(100, 100));
+			for (size_t c = 0; c < circlePositions.size(); c++)
+			{
+				testIMeshCache.batchModel(meshIdCircle, 
+					circlePositions[c], circleRadians[c], circleScales[c]);
+			}
+			k10::gWindow->use();
+			testIMeshCache.draw(k10::gVaTextureless);
+			guiFrameDiagData.draw();
 		}
 		k10::gWindow->swapBuffer();
 	}
