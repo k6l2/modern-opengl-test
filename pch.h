@@ -24,6 +24,9 @@ using v2f = glm::vec2;
 using v2i = glm::ivec2;
 using v2u = glm::uvec2;
 #include "lodepng/lodepng.h"
+#define OPTICK_ENABLE_GPU_VULKAN false
+#define OPTICK_ENABLE_GPU_D3D12  false
+#include "optick/optick.h"
 #include <cstdlib>
 #include <vector>
 using std::vector;

@@ -131,11 +131,20 @@
     <ClCompile Include="InstancedMeshCache.cpp" />
     <ClCompile Include="lodepng\lodepng.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="optick\optick_core.cpp" />
+    <ClCompile Include="optick\optick_gpu.cpp" />
+    <ClCompile Include="optick\optick_gpu.d3d12.cpp" />
+    <ClCompile Include="optick\optick_gpu.vulkan.cpp" />
+    <ClCompile Include="optick\optick_message.cpp" />
+    <ClCompile Include="optick\optick_miniz.cpp" />
+    <ClCompile Include="optick\optick_serialization.cpp" />
+    <ClCompile Include="optick\optick_server.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Simulation.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="ThreadPool.cpp" />
     <ClCompile Include="Time.cpp" />
@@ -157,6 +166,7 @@
     <ClInclude Include="lodepng\lodepng.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Simulation.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="ThreadPool.h" />
     <ClInclude Include="Time.h" />

@@ -16,6 +16,9 @@
     <Filter Include="Source Files\imgui">
       <UniqueIdentifier>{b2ff8f39-9ad2-4f80-9240-59b3eec5507f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\optick">
+      <UniqueIdentifier>{ea25596c-d2ff-4868-8af6-7d6cb031a84b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -96,6 +99,33 @@
     <ClCompile Include="InstancedMeshCache.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Simulation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_server.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_core.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_gpu.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_gpu.d3d12.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_gpu.vulkan.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_message.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_miniz.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
+    <ClCompile Include="optick\optick_serialization.cpp">
+      <Filter>Source Files\optick</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -153,6 +183,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="InstancedMeshCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Simulation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

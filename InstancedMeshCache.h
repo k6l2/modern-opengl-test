@@ -46,10 +46,20 @@ public:
 							 v2f const* instanceModelTranslations, 
 							 float const* instanceModelRadians,
 							 v2f const* instanceModelScales);
+	bool mapBuffers();
+	// the jobs posted by this function can ONLY be processed if the cache is
+	//	in a 'mapped' state!
+	void postUpdateInstanceJobs(MeshId mid, size_t instanceCount,
+								v2f const* instanceModelTranslations,
+								float const* instanceModelRadians,
+								v2f const* instanceModelScales);
+	VertexBuffer::MemoryUnmapResult unmapBuffers();
 	// draw performs the following tasks:
 	//	-sets up the gfx pipeline to use the correct VAO(s)
 	//	-submits the OpenGL draw calls
 	void draw(VertexArray const& vaTextureless);
+private:
+	bool inMappedState() const;
 private:
 	size_t maxTotalMeshVertexCount;
 	size_t maxTotalInstances;
@@ -80,4 +90,9 @@ private:
 	VertexBuffer vbInstanceModelTranslation;
 	VertexBuffer vbInstanceModelRadians;
 	VertexBuffer vbInstanceModelScale;
+	// mapped buffer access pointers (when this cache is in the mapped state) //
+	//	When the cache is unmapped, these should all be NULL //
+	v2f* mappedInstanceModelTranslations = nullptr;
+	float* mappedInstanceModelRadians = nullptr;
+	v2f* mappedInstanceModelScales = nullptr;
 };

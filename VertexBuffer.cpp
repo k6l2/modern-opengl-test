@@ -58,6 +58,7 @@ void VertexBuffer::update(void const* newData) const
 void VertexBuffer::update(void const* newData, 
 						  size_t elementOffset, size_t elementCount) const
 {
+	OPTICK_EVENT();
 	SDL_assert(bufferObject);
 	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
 	glBufferSubData(GL_ARRAY_BUFFER, elementOffset*elementStride, 
@@ -107,6 +108,51 @@ void VertexBuffer::bind(GLuint bufferBindingIndex,
 					 glewGetErrorString(oglStatus));
 		SDL_assert(false);
 	}
+}
+void* VertexBuffer::mapWriteOnly(size_t elementOffset, 
+								 size_t elementCount) const
+{
+	OPTICK_EVENT();
+	SDL_assert(bufferObject);
+	SDL_assert(glGetError() == GL_NO_ERROR);
+	void* const retVal =
+		glMapNamedBufferRange(bufferObject, 
+							  elementOffset * elementStride, 
+							  elementCount * elementStride, 
+							  GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+	if (!retVal)
+	{
+		SDL_assert(false);
+	}
+	const GLenum oglStatus = glGetError();
+	if (oglStatus != GL_NO_ERROR)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
+			"Failed to map VertexBuffer. OGL Error='%s'\n",
+			glewGetErrorString(oglStatus));
+		SDL_assert(false);
+	}
+	return retVal;
+}
+VertexBuffer::MemoryUnmapResult VertexBuffer::unmap() const
+{
+	SDL_assert(bufferObject);
+	SDL_assert(glGetError() == GL_NO_ERROR);
+	const GLboolean result = glUnmapNamedBuffer(bufferObject);
+	if (!result)
+	{
+		const GLenum oglStatus = glGetError();
+		if (oglStatus != GL_NO_ERROR)
+		{
+			SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
+				"Failed to unmap VertexBuffer. OGL Error='%s'\n",
+				glewGetErrorString(oglStatus));
+			SDL_assert(false);
+			return MemoryUnmapResult::ERROR;
+		}
+		return MemoryUnmapResult::FAILURE;
+	}
+	return MemoryUnmapResult::SUCCESS;
 }
 GLenum VertexBuffer::decodeMemoryUsage(MemoryUsage mu)
 {

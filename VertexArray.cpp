@@ -59,6 +59,7 @@ bool VertexArray::use(VertexArray const* const va,
 					  GlobalUniformBuffer const& gub,
 					  vector<VertexBuffer const*> const& vbs)
 {
+	OPTICK_EVENT();
 	if (!va)
 	{
 		glBindVertexArray(NULL);

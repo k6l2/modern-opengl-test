@@ -9,6 +9,7 @@ void GuiFrameDiagnosticData::append(i32 milliseconds, u32 logicTicks, u32 wasted
 }
 void GuiFrameDiagnosticData::draw() const
 {
+	OPTICK_EVENT();
 	auto maxMsIt = 
 		max_element(frameDiagData.begin(), frameDiagData.end(), 
 					[](FrameDiagnosticData const& a, 

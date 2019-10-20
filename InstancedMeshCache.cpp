@@ -103,6 +103,7 @@ void InstancedMeshCache::updateMeshInstances(MeshId mid, size_t instanceCount,
 											 float const* instanceModelRadians,
 											 v2f const* instanceModelScales)
 {
+	OPTICK_EVENT();
 	if (mid >= meshData.size())
 	{
 		SDL_assert(false);
@@ -119,8 +120,156 @@ void InstancedMeshCache::updateMeshInstances(MeshId mid, size_t instanceCount,
 	vbInstanceModelRadians    .update(instanceModelRadians     , meshDatum.baseInstance, instanceCount);
 	vbInstanceModelScale      .update(instanceModelScales      , meshDatum.baseInstance, instanceCount);
 }
+bool InstancedMeshCache::mapBuffers()
+{
+	OPTICK_EVENT();
+	if (inMappedState())
+	{
+		SDL_assert(false);
+		return false;
+	}
+	GLsizei totalInstanceCount = 0;
+///	for (MeshData const& meshDatum : meshData)
+///	{
+///		totalInstanceCount += meshDatum.
+///	}
+	if (!meshData.empty())
+	{
+		totalInstanceCount = 
+			meshData.back().baseInstance + meshData.back().instanceCount;
+	}
+	SDL_assert(totalInstanceCount > 0);
+	mappedInstanceModelTranslations = static_cast<v2f*>(
+		vbInstanceModelTranslation.mapWriteOnly(0, totalInstanceCount));
+	if (!mappedInstanceModelTranslations)
+	{
+		SDL_assert(false);
+		return false;
+	}
+	mappedInstanceModelRadians = static_cast<float*>(
+		vbInstanceModelRadians.mapWriteOnly(0, totalInstanceCount));
+	if (!mappedInstanceModelRadians)
+	{
+		SDL_assert(false);
+		return false;
+	}
+	mappedInstanceModelScales = static_cast<v2f*>(
+		vbInstanceModelScale.mapWriteOnly(0, totalInstanceCount));
+	if (!mappedInstanceModelScales)
+	{
+		SDL_assert(false);
+		return false;
+	}
+	return true;
+}
+void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount,
+												v2f const* instanceModelTranslations,
+												float const* instanceModelRadians,
+												v2f const* instanceModelScales)
+{
+	OPTICK_EVENT();
+	if (mid >= meshData.size())
+	{
+		SDL_assert(false);
+		return;
+	}
+	MeshData& meshDatum = meshData[mid];
+	if (instanceCount > meshDatum.instanceCountMax)
+	{
+		SDL_assert(false);
+		return;
+	}
+	meshDatum.instanceCount = static_cast<GLsizei>(instanceCount);
+/// 	const JobDataUpdateModelInstances job
+/// 	{
+/// 		mappedInstanceModelTranslations,
+/// 		mappedInstanceModelRadians,
+/// 		mappedInstanceModelScales,
+/// 		instanceModelTranslations,
+/// 		instanceModelRadians,
+/// 		instanceModelScales,
+/// 		instanceCount,
+/// 		meshDatum.baseInstance
+/// 	};
+/// 	k10::gThreadPool.postJob(job);
+	{
+		const JobDataCopyDataV2f jobCopyTranslations
+		{
+			JobTitle::COPY_DATA_V2F,
+			mappedInstanceModelTranslations,
+			instanceModelTranslations,
+			instanceCount,
+			meshDatum.baseInstance
+		};
+		k10::gThreadPool.postJob(jobCopyTranslations);
+	}
+	{
+		const JobDataCopyDataV2f jobCopyScales
+		{
+			JobTitle::COPY_DATA_V2F,
+			mappedInstanceModelScales,
+			instanceModelScales,
+			instanceCount,
+			meshDatum.baseInstance
+		};
+		k10::gThreadPool.postJob(jobCopyScales);
+	}
+	{
+		const JobDataCopyDataFloat jobCopyRadians
+		{
+			JobTitle::COPY_DATA_FLOAT,
+			mappedInstanceModelRadians,
+			instanceModelRadians,
+			instanceCount,
+			meshDatum.baseInstance
+		};
+		k10::gThreadPool.postJob(jobCopyRadians);
+	}
+}
+VertexBuffer::MemoryUnmapResult InstancedMeshCache::unmapBuffers()
+{
+	OPTICK_EVENT();
+	if (!inMappedState())
+	{
+		return VertexBuffer::MemoryUnmapResult::ERROR;
+	}
+	VertexBuffer::MemoryUnmapResult retVal =
+		VertexBuffer::MemoryUnmapResult::SUCCESS;
+	switch (vbInstanceModelTranslation.unmap())
+	{
+	case VertexBuffer::MemoryUnmapResult::ERROR:
+		return VertexBuffer::MemoryUnmapResult::ERROR;
+	case VertexBuffer::MemoryUnmapResult::FAILURE:
+		retVal = VertexBuffer::MemoryUnmapResult::FAILURE;
+	default:
+		break;
+	}
+	switch (vbInstanceModelRadians.unmap())
+	{
+	case VertexBuffer::MemoryUnmapResult::ERROR:
+		return VertexBuffer::MemoryUnmapResult::ERROR;
+	case VertexBuffer::MemoryUnmapResult::FAILURE:
+		retVal = VertexBuffer::MemoryUnmapResult::FAILURE;
+	default:
+		break;
+	}
+	switch (vbInstanceModelScale.unmap())
+	{
+	case VertexBuffer::MemoryUnmapResult::ERROR:
+		return VertexBuffer::MemoryUnmapResult::ERROR;
+	case VertexBuffer::MemoryUnmapResult::FAILURE:
+		retVal = VertexBuffer::MemoryUnmapResult::FAILURE;
+	default:
+		break;
+	}
+	mappedInstanceModelTranslations = nullptr;
+	mappedInstanceModelRadians = nullptr;
+	mappedInstanceModelScales = nullptr;
+	return retVal;
+}
 void InstancedMeshCache::draw(VertexArray const& vaTextureless)
 {
+	OPTICK_EVENT();
 	VertexArray::use(&vaTextureless, k10::gGlobalUniformBuffer,
 					 { &vbPosition, &vbColor, &vbInstanceModelTranslation, 
 					 	&vbInstanceModelRadians, &vbInstanceModelScale} );
@@ -138,4 +287,10 @@ void InstancedMeshCache::draw(VertexArray const& vaTextureless)
 		//	since the nature of this class is DYNAMIC instance drawing.
 		meshDatum.instanceCount = 0;
 	}
+}
+bool InstancedMeshCache::inMappedState() const
+{
+	return mappedInstanceModelTranslations != nullptr &&
+		   mappedInstanceModelRadians      != nullptr &&
+		   mappedInstanceModelScales       != nullptr;
 }

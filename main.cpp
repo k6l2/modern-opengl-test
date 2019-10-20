@@ -133,6 +133,7 @@ int main(int argc, char** argv)
 	GfxProgram::use(&k10::gProgTextureless);
 	while (true)
 	{
+		OPTICK_FRAME("MainThread");
 		SDL_Event event;
 		bool quit = false;
 		while (SDL_PollEvent(&event))
@@ -176,6 +177,7 @@ int main(int argc, char** argv)
 				for (size_t m = 0; m < circlePositions.size(); m += modelsPerJob)
 				{
 					const JobDataProcessModels job = {
+						JobTitle::PROCESS_MODELS,
 						circlePositions.data(),
 						circleRadians.data(),
 						circleScales.data(),
@@ -185,10 +187,7 @@ int main(int argc, char** argv)
 					};
 					k10::gThreadPool.postJob(job);
 				}
-				while (!k10::gThreadPool.allWorkFinished())
-				{
-					// Spin the main thread while waiting for jobs to complete //
-				}
+				k10::gThreadPool.waitUntilAllWorkIsFinished();
 				logicTicks++;
 			}
 			else
@@ -210,6 +209,7 @@ int main(int argc, char** argv)
 		{
 			// DEBUG TESTING GUI //
 			{
+				OPTICK_EVENT("DEBUG TESTING GUI");
 				ImGui::Begin("DEBUG");
 				int actorCount = static_cast<int>(circlePositions.size());
 				if (ImGui::SliderInt("actorCount", &actorCount, 0, 1500000))
@@ -220,10 +220,22 @@ int main(int argc, char** argv)
 				}
 				ImGui::End();
 			}
-			testIMeshCache.updateMeshInstances(meshIdOrigin, originPositions.size(),
+///			testIMeshCache.updateMeshInstances(meshIdOrigin, originPositions.size(),
+///				originPositions.data(), originRadians.data(), originScales.data());
+///			testIMeshCache.updateMeshInstances(meshIdCircle, circlePositions.size(),
+///				circlePositions.data(), circleRadians.data(), circleScales.data());
+			if (!testIMeshCache.mapBuffers())
+			{
+				return cleanup(EXIT_FAILURE);
+			}
+			testIMeshCache.postUpdateInstanceJobs(meshIdOrigin, originPositions.size(),
 				originPositions.data(), originRadians.data(), originScales.data());
-			testIMeshCache.updateMeshInstances(meshIdCircle, circlePositions.size(),
+			testIMeshCache.postUpdateInstanceJobs(meshIdCircle, circlePositions.size(),
 				circlePositions.data(), circleRadians.data(), circleScales.data());
+			k10::gThreadPool.waitUntilAllWorkIsFinished();
+			const VertexBuffer::MemoryUnmapResult unmapResult =
+				testIMeshCache.unmapBuffers();
+			SDL_assert(unmapResult == VertexBuffer::MemoryUnmapResult::SUCCESS);
 			k10::gWindow->use();
 			testIMeshCache.draw(k10::gVaTextureless);
 			guiFrameDiagData.draw();

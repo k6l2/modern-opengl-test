@@ -181,6 +181,7 @@ void Window::destroy(Window* w)
 }
 void Window::clear(Color const& c)
 {
+	OPTICK_EVENT();
 	// binding NULL causes the window to become the target framebuffer //
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, NULL);
 	glClearColor(c.fR(), c.fG(), c.fB(), c.fA());
@@ -191,6 +192,7 @@ void Window::clear(Color const& c)
 }
 void Window::use() const
 {
+	OPTICK_EVENT();
 	// binding NULL causes the window to become the target framebuffer //
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, NULL);
 	// make sure that we are drawing to the proper window area //
@@ -220,11 +222,15 @@ void Window::processEvent(SDL_Event const& event)
 }
 void Window::swapBuffer()
 {
-	ImGui::Render();
-	///glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-	///glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-	///glClear(GL_COLOR_BUFFER_BIT);
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	{
+		OPTICK_EVENT("ImGuiRender");
+		ImGui::Render();
+		///glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+		///glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+		///glClear(GL_COLOR_BUFFER_BIT);
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	}
+	OPTICK_EVENT();
 	SDL_GL_SwapWindow(window);
 }
 v2f Window::transformToWorldSpace(v2i const& windowSpacePosition) const

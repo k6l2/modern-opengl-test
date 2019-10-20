@@ -1,4 +1,16 @@
 #include "ThreadPool.h"
+JobDataGeneric::JobDataGeneric(JobDataProcessModels const& jd)
+{
+	processModels = jd;
+}
+JobDataGeneric::JobDataGeneric(JobDataCopyDataV2f const& jd)
+{
+	copyDataV2f = jd;
+}
+JobDataGeneric::JobDataGeneric(JobDataCopyDataFloat const& jd)
+{
+	copyDataFloat = jd;
+}
 void ThreadPool::create(size_t threadCount)
 {
 	threads.resize(threadCount);
@@ -23,19 +35,43 @@ bool ThreadPool::allWorkFinished()
 {
 	return jobsCompleted == jobsPosted;
 }
-void ThreadPool::postJob(JobDataProcessModels const& job)
+void ThreadPool::waitUntilAllWorkIsFinished()
 {
+	OPTICK_EVENT();
+///	workerThreadCondition.notify_all();
+	while (true)
+	{
+		{
+			unique_lock<mutex> lock(allWorkFinishedMutex);
+			allWorkFinishedCondition.wait(lock, [this]()->bool
+				{
+					return allWorkFinished();
+				});
+			// re-check condition in case of a spurious wakeup //
+			if (!allWorkFinished())
+			{
+				continue;
+			}
+		}
+		// once all work has finished, we can finally release control flow //
+		break;
+	}
+}
+void ThreadPool::postJob(JobDataGeneric const& job)
+{
+	OPTICK_EVENT();
 	unique_lock<mutex> lock(workerThreadMutex);
-	jobsProcessModels.push(job);
+	jobs.push(job);
 	jobsPosted++;
 	lock.unlock();
 	workerThreadCondition.notify_one();
 }
 int ThreadPool::workerThreadMain(void* data)
 {
+	OPTICK_THREAD("ThreadPoolWorker");
 	ThreadPool*const tpOwner = 
 		static_cast<ThreadPool*>(data);
-	JobDataProcessModels currentJobProcessModels;
+	JobDataGeneric currentJob(JobDataProcessModels{});
 	while (true)
 	{
 		// keep the thread idle and only wake under certain conditions //
@@ -44,38 +80,77 @@ int ThreadPool::workerThreadMain(void* data)
 			tpOwner->workerThreadCondition.wait(lock, [tpOwner]()->bool
 				{
 					return !tpOwner->running ||
-						!tpOwner->jobsProcessModels.empty();
+						!tpOwner->jobs.empty();
 				});
 			if (!tpOwner->running)
 			{
 				SDL_Log("Shutting down worker thread...\n");
 				break;
 			}
-			if (tpOwner->jobsProcessModels.empty())
+			if (tpOwner->jobs.empty())
 			{
 				continue;
 			}
-			currentJobProcessModels = tpOwner->jobsProcessModels.front();
-			tpOwner->jobsProcessModels.pop();
+			currentJob = tpOwner->jobs.front();
+			tpOwner->jobs.pop();
 		}
 		// at this point, we should be hired! Now we can work~~~ //
 ///		SDL_Log("Hired for job!\n");
+		switch (currentJob.jobTitle)
 		{
-			for (size_t m = currentJobProcessModels.modelOffset; 
-				 m < currentJobProcessModels.modelOffset + 
-						currentJobProcessModels.modelCount; m++)
+		case JobTitle::PROCESS_MODELS: {
+			OPTICK_EVENT("JobTitle::PROCESS_MODELS");
+			for (size_t m = currentJob.processModels.modelOffset;
+				 m < currentJob.processModels.modelOffset +
+				currentJob.processModels.modelCount; m++)
 			{
 				static const float RADIANS_PER_SECOND = k10::PI * 2.f;
-				const size_t meshCol = m % currentJobProcessModels.numMeshCols;
-				const size_t meshRow = m / currentJobProcessModels.numMeshCols;
-				currentJobProcessModels.modelsTranslation[m] =
-					currentJobProcessModels.meshAabb * v2f(meshCol, meshRow);
-				currentJobProcessModels.modelsRadians[m] +=
+				const size_t meshCol = m % currentJob.processModels.numMeshCols;
+				const size_t meshRow = m / currentJob.processModels.numMeshCols;
+				currentJob.processModels.modelsTranslation[m] =
+					currentJob.processModels.meshAabb * v2f(meshCol, meshRow);
+				currentJob.processModels.modelsRadians[m] +=
 					RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
-				currentJobProcessModels.modelsScales[m] = v2f(20, 20);
+				currentJob.processModels.modelsScales[m] = v2f(20, 20);
 			}
+		} break;
+		case JobTitle::COPY_DATA_V2F: {
+			OPTICK_EVENT("JobTitle::COPY_DATA_V2F");
+			static const size_t stride = sizeof(v2f);
+			const size_t destByteOffset =
+				stride * currentJob.copyDataV2f.destinationOffset;
+			const size_t dataSize = 
+				stride * currentJob.copyDataV2f.elementCount;
+			for (size_t c = 0; c < currentJob.copyDataV2f.elementCount; c++)
+			{
+				currentJob.copyDataV2f.destination[c + currentJob.copyDataV2f.destinationOffset] =
+					currentJob.copyDataV2f.source[c];
+			}
+//			memcpy(currentJob.copyDataV2f.destination + destByteOffset,
+//				currentJob.copyDataV2f.source, dataSize);
+		} break;
+		case JobTitle::COPY_DATA_FLOAT: {
+			OPTICK_EVENT("JobTitle::COPY_DATA_FLOAT");
+			static const size_t stride = sizeof(float);
+			const size_t destByteOffset =
+				stride * currentJob.copyDataFloat.destinationOffset;
+			const size_t dataSize =
+				stride * currentJob.copyDataFloat.elementCount;
+			for (size_t c = 0; c < currentJob.copyDataFloat.elementCount; c++)
+			{
+				currentJob.copyDataFloat.destination[c + currentJob.copyDataFloat.destinationOffset] =
+					currentJob.copyDataFloat.source[c];
+			}
+//			memcpy(currentJob.copyDataFloat.destination + destByteOffset,
+//				currentJob.copyDataFloat.source, dataSize);
+		} break;
 		}
+		unique_lock<mutex> lock(tpOwner->allWorkFinishedMutex);
 		tpOwner->jobsCompleted++;
+		if (tpOwner->allWorkFinished())
+		{
+			tpOwner->allWorkFinishedCondition.notify_all();
+		}
 	}
 	return EXIT_SUCCESS;
 }
