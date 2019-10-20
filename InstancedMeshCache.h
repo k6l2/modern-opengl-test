@@ -52,7 +52,8 @@ public:
 	void postUpdateInstanceJobs(MeshId mid, size_t instanceCount,
 								v2f const* instanceModelTranslations,
 								float const* instanceModelRadians,
-								v2f const* instanceModelScales);
+								v2f const* instanceModelScales,
+								size_t modelsPerJob);
 	VertexBuffer::MemoryUnmapResult unmapBuffers();
 	// draw performs the following tasks:
 	//	-sets up the gfx pipeline to use the correct VAO(s)

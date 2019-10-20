@@ -165,7 +165,8 @@ bool InstancedMeshCache::mapBuffers()
 void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount,
 												v2f const* instanceModelTranslations,
 												float const* instanceModelRadians,
-												v2f const* instanceModelScales)
+												v2f const* instanceModelScales,
+												size_t modelsPerJob)
 {
 	OPTICK_EVENT();
 	if (mid >= meshData.size())
@@ -180,50 +181,42 @@ void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount
 		return;
 	}
 	meshDatum.instanceCount = static_cast<GLsizei>(instanceCount);
-/// 	const JobDataUpdateModelInstances job
-/// 	{
-/// 		mappedInstanceModelTranslations,
-/// 		mappedInstanceModelRadians,
-/// 		mappedInstanceModelScales,
-/// 		instanceModelTranslations,
-/// 		instanceModelRadians,
-/// 		instanceModelScales,
-/// 		instanceCount,
-/// 		meshDatum.baseInstance
-/// 	};
-/// 	k10::gThreadPool.postJob(job);
+///	modelsPerJob = instanceCount;
+	for (size_t m = 0; m < instanceCount; m += modelsPerJob)
 	{
-		const JobDataCopyDataV2f jobCopyTranslations
 		{
-			JobTitle::COPY_DATA_V2F,
-			mappedInstanceModelTranslations,
-			instanceModelTranslations,
-			instanceCount,
-			meshDatum.baseInstance
-		};
-		k10::gThreadPool.postJob(jobCopyTranslations);
-	}
-	{
-		const JobDataCopyDataV2f jobCopyScales
+			const JobDataCopyDataV2f jobCopyTranslations
+			{
+				JobTitle::COPY_DATA_V2F,
+				mappedInstanceModelTranslations,
+				&instanceModelTranslations[m],
+				min(instanceCount - m, size_t(modelsPerJob)),
+				meshDatum.baseInstance + m
+			};
+			k10::gThreadPool.postJob(jobCopyTranslations);
+		}
 		{
-			JobTitle::COPY_DATA_V2F,
-			mappedInstanceModelScales,
-			instanceModelScales,
-			instanceCount,
-			meshDatum.baseInstance
-		};
-		k10::gThreadPool.postJob(jobCopyScales);
-	}
-	{
-		const JobDataCopyDataFloat jobCopyRadians
+			const JobDataCopyDataV2f jobCopyScales
+			{
+				JobTitle::COPY_DATA_V2F,
+				mappedInstanceModelScales,
+				&instanceModelScales[m],
+				min(instanceCount - m, size_t(modelsPerJob)),
+				meshDatum.baseInstance + m
+			};
+			k10::gThreadPool.postJob(jobCopyScales);
+		}
 		{
-			JobTitle::COPY_DATA_FLOAT,
-			mappedInstanceModelRadians,
-			instanceModelRadians,
-			instanceCount,
-			meshDatum.baseInstance
-		};
-		k10::gThreadPool.postJob(jobCopyRadians);
+			const JobDataCopyDataFloat jobCopyRadians
+			{
+				JobTitle::COPY_DATA_FLOAT,
+				mappedInstanceModelRadians,
+				&instanceModelRadians[m],
+				min(instanceCount - m, size_t(modelsPerJob)),
+				meshDatum.baseInstance + m
+			};
+			k10::gThreadPool.postJob(jobCopyRadians);
+		}
 	}
 }
 VertexBuffer::MemoryUnmapResult InstancedMeshCache::unmapBuffers()

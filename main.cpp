@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 	circlePositions.reserve(1500000);
 	circleRadians.reserve(1500000);
 	circleScales.reserve(1500000);
-	size_t modelsPerJob = 1000;
+	size_t modelsPerJob = 10000;
 	float debugRadians = 0;
 	Time frameTimeAccumulator;
 	Clock frameClock;
@@ -212,7 +212,8 @@ int main(int argc, char** argv)
 				OPTICK_EVENT("DEBUG TESTING GUI");
 				ImGui::Begin("DEBUG");
 				int actorCount = static_cast<int>(circlePositions.size());
-				if (ImGui::SliderInt("actorCount", &actorCount, 0, 1500000))
+				if (ImGui::SliderInt("actorCount", &actorCount, 0, 1500000) ||
+					ImGui::InputInt("actorCountSet", &actorCount))
 				{
 					circlePositions.resize(actorCount);
 					circleRadians.resize(actorCount);
@@ -229,9 +230,11 @@ int main(int argc, char** argv)
 				return cleanup(EXIT_FAILURE);
 			}
 			testIMeshCache.postUpdateInstanceJobs(meshIdOrigin, originPositions.size(),
-				originPositions.data(), originRadians.data(), originScales.data());
+				originPositions.data(), originRadians.data(), originScales.data(),
+				modelsPerJob);
 			testIMeshCache.postUpdateInstanceJobs(meshIdCircle, circlePositions.size(),
-				circlePositions.data(), circleRadians.data(), circleScales.data());
+				circlePositions.data(), circleRadians.data(), circleScales.data(),
+				modelsPerJob);
 			k10::gThreadPool.waitUntilAllWorkIsFinished();
 			const VertexBuffer::MemoryUnmapResult unmapResult =
 				testIMeshCache.unmapBuffers();
