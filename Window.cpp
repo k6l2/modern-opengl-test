@@ -161,6 +161,8 @@ Window* Window::create(char const* title, glm::ivec2 const& size)
 		ImGui_ImplSDL2_InitForOpenGL(retVal->window, retVal->context);
 		ImGui_ImplOpenGL3_Init(glsl_version);
 	}
+///	glEnable(GL_CULL_FACE);
+///	glCullFace(GL_BACK);
 	return retVal;
 }
 void Window::destroy(Window* w)

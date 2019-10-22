@@ -111,7 +111,7 @@ int ThreadPool::workerThreadMain(void* data)
 					currentJob.processModels.meshAabb * v2f(meshCol, meshRow);
 				currentJob.processModels.modelsRadians[m] +=
 					RADIANS_PER_SECOND * k10::FIXED_TIME_PER_FRAME.seconds();
-				currentJob.processModels.modelsScales[m] = v2f(20, 20);
+				currentJob.processModels.modelsScales[m] = v2f(10, 10);
 			}
 		} break;
 		case JobTitle::COPY_DATA_V2F: {

@@ -17,6 +17,7 @@ public:
 	Time& operator-=(Time const& rightHandSide);
 	bool operator>=(Time const& rightHandSide) const;
 	bool operator<=(Time const& rightHandSide) const;
+	bool operator<(Time const& rightHandSide) const;
 private:
 	std::chrono::duration<double> timeDuration = 
 		std::chrono::duration<double>(0);

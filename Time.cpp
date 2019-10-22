@@ -66,3 +66,7 @@ bool Time::operator<=(Time const& rightHandSide) const
 {
 	return timeDuration <= rightHandSide.timeDuration;
 }
+bool Time::operator<(Time const& rightHandSide) const
+{
+	return timeDuration < rightHandSide.timeDuration;
+}

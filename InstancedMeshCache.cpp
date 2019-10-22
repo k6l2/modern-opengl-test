@@ -1,37 +1,43 @@
 #include "InstancedMeshCache.h"
 bool InstancedMeshCache::create(size_t maxTotalMeshVertexCount,
 								size_t maxTotalInstances,
-								size_t maxBatchCount)
+								size_t maxBatchCount,
+								u8 maxFrameCascade)
 {
 	this->maxTotalMeshVertexCount = maxTotalMeshVertexCount;
 	this->maxTotalInstances       = maxTotalInstances;
 	this->maxBatchCount           = maxBatchCount;
-	if (!vbPosition.create(maxTotalMeshVertexCount, sizeof(v2f), 
-						   VertexBuffer::MemoryUsage::STATIC))
+	this->maxFrameCascade         = maxFrameCascade;
+	currentMeshInstanceMaximum = 0;
+	if (!vbPosition.createFixedSize(maxTotalMeshVertexCount, sizeof(v2f),
+									VertexBuffer::MemoryUsage::STATIC))
 	{
 		SDL_assert(false);
 		return false;
 	}
-	if (!vbColor.create(maxTotalMeshVertexCount, sizeof(Color),
-						VertexBuffer::MemoryUsage::STATIC))
+	if (!vbColor.createFixedSize(maxTotalMeshVertexCount, sizeof(Color),
+								 VertexBuffer::MemoryUsage::STATIC))
 	{
 		SDL_assert(false);
 		return false;
 	}
-	if (!vbInstanceModelTranslation.create(maxTotalInstances, sizeof(v2f),
-										   VertexBuffer::MemoryUsage::STREAM))
+	if (!vbInstanceModelTranslation.createFixedSize(maxTotalInstances * maxFrameCascade,
+													sizeof(v2f),
+													VertexBuffer::MemoryUsage::STREAM))
 	{
 		SDL_assert(false);
 		return false;
 	}
-	if (!vbInstanceModelRadians.create(maxTotalInstances, sizeof(float),
-									   VertexBuffer::MemoryUsage::STREAM))
+	if (!vbInstanceModelRadians.createFixedSize(maxTotalInstances * maxFrameCascade,
+												sizeof(float),
+												VertexBuffer::MemoryUsage::STREAM))
 	{
 		SDL_assert(false);
 		return false;
 	}
-	if (!vbInstanceModelScale.create(maxTotalInstances, sizeof(v2f),
-									 VertexBuffer::MemoryUsage::STREAM))
+	if (!vbInstanceModelScale.createFixedSize(maxTotalInstances * maxFrameCascade,
+											  sizeof(v2f),
+											  VertexBuffer::MemoryUsage::STREAM))
 	{
 		SDL_assert(false);
 		return false;
@@ -56,6 +62,7 @@ InstancedMeshCache::MeshId
 	SDL_assert(vertexPositions.size() == vertexColors.size());
 	SDL_assert(!primitiveTypes.empty());
 	SDL_assert(primitiveTypes.size() == primitiveVertexCounts.size());
+	SDL_assert(currentMeshInstanceMaximum + maxInstances <= maxTotalInstances);
 	const GLuint baseInstance = meshData.empty() ? 0 :
 		meshData.back().baseInstance + 
 			meshData.back().instanceCountMax;
@@ -96,6 +103,11 @@ InstancedMeshCache::MeshId
 	SDL_assert(meshData.size() < INVALID_MESH_ID);
 	const MeshId retVal = static_cast<MeshId>(meshData.size());
 	meshData.push_back(newMeshDatum);
+	// adding any meshes to the cache will change the total maximum # of 
+	//	instances per draw call, so we need to update the cascade data to 
+	//	prevent going out of bounds of the instance buffers
+	currentMeshInstanceMaximum += maxInstances;
+	dataCascadeInstanceOffsetCurrent = 0;
 	return retVal;
 }
 void InstancedMeshCache::updateMeshInstances(MeshId mid, size_t instanceCount,
@@ -128,39 +140,80 @@ bool InstancedMeshCache::mapBuffers()
 		SDL_assert(false);
 		return false;
 	}
-	GLsizei totalInstanceCount = 0;
-///	for (MeshData const& meshDatum : meshData)
-///	{
-///		totalInstanceCount += meshDatum.
-///	}
-	if (!meshData.empty())
-	{
-		totalInstanceCount = 
-			meshData.back().baseInstance + meshData.back().instanceCount;
-	}
-	SDL_assert(totalInstanceCount > 0);
 	mappedInstanceModelTranslations = static_cast<v2f*>(
-		vbInstanceModelTranslation.mapWriteOnly(0, totalInstanceCount));
+		vbInstanceModelTranslation.mapWriteOnly(0,
+												maxTotalInstances* maxFrameCascade, 
+												false));
 	if (!mappedInstanceModelTranslations)
 	{
 		SDL_assert(false);
 		return false;
 	}
 	mappedInstanceModelRadians = static_cast<float*>(
-		vbInstanceModelRadians.mapWriteOnly(0, totalInstanceCount));
+		vbInstanceModelRadians.mapWriteOnly(0,
+											maxTotalInstances * maxFrameCascade,
+											false));
 	if (!mappedInstanceModelRadians)
 	{
 		SDL_assert(false);
 		return false;
 	}
 	mappedInstanceModelScales = static_cast<v2f*>(
-		vbInstanceModelScale.mapWriteOnly(0, totalInstanceCount));
+		vbInstanceModelScale.mapWriteOnly(0,
+										  maxTotalInstances * maxFrameCascade,
+										  false));
 	if (!mappedInstanceModelScales)
 	{
 		SDL_assert(false);
 		return false;
 	}
 	return true;
+	///////////////////////////////////////////////////////////////////////////
+/// 	GLsizei totalInstanceCount = 0;
+/// ///	for (MeshData const& meshDatum : meshData)
+/// ///	{
+/// ///		totalInstanceCount += meshDatum.
+/// ///	}
+/// 	if (!meshData.empty())
+/// 	{
+/// 		totalInstanceCount = 
+/// 			meshData.back().baseInstance + meshData.back().instanceCountMax;
+/// 	}
+/// 	SDL_assert(totalInstanceCount > 0);
+/// 	const bool orphanBuffers = dataCascadeInstanceOffsetCurrent >= 
+/// 		(maxTotalInstances * maxFrameCascade) - totalInstanceCount;
+/// 	if (orphanBuffers)
+/// 	{
+/// 		dataCascadeInstanceOffsetCurrent = 0;
+/// 	}
+/// ///	SDL_Log("maxTotalInstances=%i totalInstanceCount=%i\n", maxTotalInstances* maxFrameCascade, totalInstanceCount);
+/// ///	SDL_Log("dataCascadeInstanceOffsetCurrent=%i\n", dataCascadeInstanceOffsetCurrent);
+/// 	dataCascadeInstanceOffsetNext = dataCascadeInstanceOffsetCurrent + totalInstanceCount;
+/// 	mappedInstanceModelTranslations = static_cast<v2f*>(
+/// 		vbInstanceModelTranslation.mapWriteOnly(dataCascadeInstanceOffsetCurrent,
+/// 												totalInstanceCount, orphanBuffers));
+/// 	if (!mappedInstanceModelTranslations)
+/// 	{
+/// 		SDL_assert(false);
+/// 		return false;
+/// 	}
+/// 	mappedInstanceModelRadians = static_cast<float*>(
+/// 		vbInstanceModelRadians.mapWriteOnly(dataCascadeInstanceOffsetCurrent,
+/// 											totalInstanceCount, orphanBuffers));
+/// 	if (!mappedInstanceModelRadians)
+/// 	{
+/// 		SDL_assert(false);
+/// 		return false;
+/// 	}
+/// 	mappedInstanceModelScales = static_cast<v2f*>(
+/// 		vbInstanceModelScale.mapWriteOnly(dataCascadeInstanceOffsetCurrent,
+/// 										  totalInstanceCount, orphanBuffers));
+/// 	if (!mappedInstanceModelScales)
+/// 	{
+/// 		SDL_assert(false);
+/// 		return false;
+/// 	}
+/// 	return true;
 }
 void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount,
 												v2f const* instanceModelTranslations,
@@ -169,6 +222,11 @@ void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount
 												size_t modelsPerJob)
 {
 	OPTICK_EVENT();
+	if (!inMappedState())
+	{
+		SDL_assert(false);
+		return;
+	}
 	if (mid >= meshData.size())
 	{
 		SDL_assert(false);
@@ -177,11 +235,13 @@ void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount
 	MeshData& meshDatum = meshData[mid];
 	if (instanceCount > meshDatum.instanceCountMax)
 	{
+		SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
+			"instanceCount=%i > meshDatum.instanceCountMax=%i\n",
+			instanceCount, meshDatum.instanceCountMax);
 		SDL_assert(false);
 		return;
 	}
 	meshDatum.instanceCount = static_cast<GLsizei>(instanceCount);
-///	modelsPerJob = instanceCount;
 	for (size_t m = 0; m < instanceCount; m += modelsPerJob)
 	{
 		{
@@ -191,7 +251,7 @@ void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount
 				mappedInstanceModelTranslations,
 				&instanceModelTranslations[m],
 				min(instanceCount - m, size_t(modelsPerJob)),
-				meshDatum.baseInstance + m
+				dataCascadeInstanceOffsetCurrent + meshDatum.baseInstance + m
 			};
 			k10::gThreadPool.postJob(jobCopyTranslations);
 		}
@@ -202,7 +262,7 @@ void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount
 				mappedInstanceModelScales,
 				&instanceModelScales[m],
 				min(instanceCount - m, size_t(modelsPerJob)),
-				meshDatum.baseInstance + m
+				dataCascadeInstanceOffsetCurrent + meshDatum.baseInstance + m
 			};
 			k10::gThreadPool.postJob(jobCopyScales);
 		}
@@ -213,7 +273,7 @@ void InstancedMeshCache::postUpdateInstanceJobs(MeshId mid, size_t instanceCount
 				mappedInstanceModelRadians,
 				&instanceModelRadians[m],
 				min(instanceCount - m, size_t(modelsPerJob)),
-				meshDatum.baseInstance + m
+				dataCascadeInstanceOffsetCurrent + meshDatum.baseInstance + m
 			};
 			k10::gThreadPool.postJob(jobCopyRadians);
 		}
@@ -258,6 +318,7 @@ VertexBuffer::MemoryUnmapResult InstancedMeshCache::unmapBuffers()
 	mappedInstanceModelTranslations = nullptr;
 	mappedInstanceModelRadians = nullptr;
 	mappedInstanceModelScales = nullptr;
+///	dataCascadeInstanceOffsetCurrent = dataCascadeInstanceOffsetNext;
 	return retVal;
 }
 void InstancedMeshCache::draw(VertexArray const& vaTextureless)
@@ -273,12 +334,20 @@ void InstancedMeshCache::draw(VertexArray const& vaTextureless)
 		{
 			glDrawArraysInstancedBaseInstance(pBatch.primitiveType,
 				pBatch.meshVertexStartIndex, pBatch.meshVertexCount,
-				meshDatum.instanceCount, meshDatum.baseInstance);
+				meshDatum.instanceCount, 
+				dataCascadeInstanceOffsetCurrent + meshDatum.baseInstance);
 		}
 		// Ensure that the user must call 'updateMeshInstances' at least once
 		//	per frame before 'draw' in order for any instances to get drawn,
 		//	since the nature of this class is DYNAMIC instance drawing.
 		meshDatum.instanceCount = 0;
+	}
+///	dataCascadeInstanceOffsetCurrent = dataCascadeInstanceOffsetNext;
+	dataCascadeInstanceOffsetCurrent += static_cast<GLuint>(currentMeshInstanceMaximum);
+	if (dataCascadeInstanceOffsetCurrent + 
+			currentMeshInstanceMaximum > maxTotalInstances * maxFrameCascade)
+	{
+		dataCascadeInstanceOffsetCurrent = 0;
 	}
 }
 bool InstancedMeshCache::inMappedState() const

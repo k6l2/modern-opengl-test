@@ -33,9 +33,17 @@ public:
 	//	worse performance we will get.  Try to keep this as close as possible
 	//	to the sum of all primitive batches for all meshes added via 'addMesh'
 	//	(probably sub 3 figures)
+	// max frame cascade refers to the maximum possible # of frames worth of
+	//	data that can be concurrently present in each VBO.  This technique is
+	//	used to prevent us from tripping over data that is still being 
+	//	processed by OpenGL from previous frame(s) hopefully.  Read more here:
+	//	https://www.khronos.org/opengl/wiki/Buffer_Object_Streaming#Buffer_update
+	//	This # must be >= 1, but should also be as small as possible.  A good 
+	//	value should fall in the range of [2,3]
 	bool create(size_t maxTotalMeshVertexCount,
 				size_t maxTotalInstances,
-				size_t maxBatchCount);
+				size_t maxBatchCount,
+				u8 maxFrameCascade);
 	void destroy();
 	MeshId addMesh(size_t maxInstances,
 				   vector<v2f> const& vertexPositions, 
@@ -65,6 +73,10 @@ private:
 	size_t maxTotalMeshVertexCount;
 	size_t maxTotalInstances;
 	size_t maxBatchCount;
+	u8 maxFrameCascade;
+	GLuint dataCascadeInstanceOffsetCurrent;
+///	GLuint dataCascadeInstanceOffsetNext;
+	size_t currentMeshInstanceMaximum;
 	struct PrimitiveBatch
 	{
 		GLenum primitiveType;

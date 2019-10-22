@@ -20,6 +20,28 @@ bool VertexBuffer::create(size_t elementCount, GLsizei s, MemoryUsage u)
 	usage = u;
 	return true;
 }
+bool VertexBuffer::createFixedSize(size_t elementCount, GLsizei s, 
+								   MemoryUsage u)
+{
+	destroy();
+	glGenBuffers(1, &bufferObject);
+	glBindBuffer(GL_ARRAY_BUFFER, bufferObject);
+	glBufferStorage(GL_ARRAY_BUFFER, static_cast<GLsizei>(elementCount * s),
+		nullptr, decodeFixedSizeMemoryUsage(u));
+	glBindBuffer(GL_ARRAY_BUFFER, NULL);
+	const GLenum oglStatus = glGetError();
+	if (oglStatus != GL_NO_ERROR)
+	{
+		SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
+					 "Failed to create VertexBuffer. OGL Error='%s'\n",
+					 glewGetErrorString(oglStatus));
+		return false;
+	}
+	dataSize = static_cast<GLsizei>(elementCount * s);
+	elementStride = s;
+	usage = u;
+	return true;
+}
 void VertexBuffer::destroy()
 {
 	if (bufferObject)
@@ -110,16 +132,27 @@ void VertexBuffer::bind(GLuint bufferBindingIndex,
 	}
 }
 void* VertexBuffer::mapWriteOnly(size_t elementOffset, 
-								 size_t elementCount) const
+								 size_t elementCount, 
+								 bool orphanCurrentData) const
 {
 	OPTICK_EVENT();
 	SDL_assert(bufferObject);
 	SDL_assert(glGetError() == GL_NO_ERROR);
+	if (orphanCurrentData)
+	{
+		glInvalidateBufferData(bufferObject);
+	}
+///	SDL_Log("map buffer offset=%i length=%i dataSize=%i\n", elementOffset * elementStride, elementCount * elementStride, dataSize);
 	void* const retVal =
 		glMapNamedBufferRange(bufferObject, 
 							  elementOffset * elementStride, 
 							  elementCount * elementStride, 
-							  GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+							  GL_MAP_WRITE_BIT | 
+								GL_MAP_PERSISTENT_BIT |
+///								GL_MAP_COHERENT_BIT |
+								//GL_MAP_INVALIDATE_BUFFER_BIT | 
+								GL_MAP_INVALIDATE_RANGE_BIT |
+								GL_MAP_UNSYNCHRONIZED_BIT );
 	if (!retVal)
 	{
 		SDL_assert(false);
@@ -167,4 +200,21 @@ GLenum VertexBuffer::decodeMemoryUsage(MemoryUsage mu)
 	}
 	SDL_assert(false);
 	return GL_DYNAMIC_DRAW;
+}
+GLbitfield VertexBuffer::decodeFixedSizeMemoryUsage(MemoryUsage mu)
+{
+	switch (mu)
+	{
+	case MemoryUsage::STATIC:
+		return GL_DYNAMIC_STORAGE_BIT;
+	case MemoryUsage::DYNAMIC:
+		return GL_DYNAMIC_STORAGE_BIT;
+	case MemoryUsage::STREAM:
+		return //GL_DYNAMIC_STORAGE_BIT |
+			GL_MAP_PERSISTENT_BIT |
+///			GL_MAP_COHERENT_BIT |
+			GL_MAP_WRITE_BIT;
+	}
+	SDL_assert(false);
+	return NULL;
 }

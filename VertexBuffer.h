@@ -19,6 +19,7 @@ public:
 	};
 public:
 	bool create(size_t elementCount, GLsizei stride, MemoryUsage usage);
+	bool createFixedSize(size_t elementCount, GLsizei stride, MemoryUsage usage);
 	void destroy();
 	void resize(size_t elementCount);
 	void update(void const* newData) const;
@@ -26,7 +27,8 @@ public:
 				size_t elementOffset, size_t elementCount) const;
 	void bind(GLuint bufferBindingIndex) const;
 	void bind(GLuint bufferBindingIndex, GLint offset) const;
-	void* mapWriteOnly(size_t elementOffset, size_t elementCount) const;
+	void* mapWriteOnly(size_t elementOffset, size_t elementCount, 
+					   bool orphanCurrentData) const;
 	// If unmap returns FAILURE, that does not necessarily mean a critical error
 	//	has occurred.  There are cases where the system state changes during
 	//	the time where the memory was mapped, causing corruption to the memory,
@@ -35,6 +37,7 @@ public:
 	MemoryUnmapResult unmap() const;
 private:
 	static GLenum decodeMemoryUsage(MemoryUsage mu);
+	static GLbitfield decodeFixedSizeMemoryUsage(MemoryUsage mu);
 private:
 	GLuint bufferObject = NULL;
 	GLsizei elementStride = 0;
